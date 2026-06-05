@@ -35,11 +35,13 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+          cache: gradle
 
       - name: Setup Rust (with Android targets)
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+          # arm64 only — covers all modern Android devices and keeps the APK small.
+          targets: aarch64-linux-android
 
       - name: Cache Rust build
         uses: swatinem/rust-cache@v2
@@ -74,13 +76,13 @@ jobs:
           base64 -d <<< "${{ secrets.ANDROID_KEY_BASE64 }}" > "$RUNNER_TEMP/keystore.jks"
           echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
 
-      - name: Build signed release APK
+      - name: Build signed release APK (arm64)
         if: steps.signing.outputs.enabled == 'true'
-        run: npm run tauri android build -- --apk
+        run: npm run tauri android build -- --apk --target aarch64
 
-      - name: Build debug APK (no signing secrets)
+      - name: Build debug APK (arm64, no signing secrets)
         if: steps.signing.outputs.enabled != 'true'
-        run: npm run tauri android build -- --apk --debug
+        run: npm run tauri android build -- --apk --debug --target aarch64
 
       - name: Collect APKs
         run: |

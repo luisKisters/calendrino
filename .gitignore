@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Android signing — never commit keystores or signing config
+*.jks
+*.keystore
+*.p12
+keystore.properties
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
