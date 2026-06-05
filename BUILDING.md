@@ -1,13 +1,45 @@
 # Building Calendrino
 
-V0 targets **Android** (primary) and **macOS / desktop**. The same React frontend
-also runs in the browser for quick UI iteration (`pnpm run dev`).
+V0 targets **Android** (primary), **macOS / desktop**, and an installable web/PWA
+build. The same React frontend runs in the browser for quick UI iteration
+(`pnpm run dev`).
 
 ## Prerequisites (all platforms)
 
 - **Node 20+** and pnpm
 - **Rust** via [rustup](https://rustup.rs) (`rustc`, `cargo` on `PATH`)
 - Project deps installed: `pnpm install`
+
+## Browser / PWA
+
+```bash
+pnpm run dev            # fastest browser UI/PWA loop on port 1420
+pnpm run build          # production web/PWA build
+pnpm run preview        # production-like preview of dist/
+```
+
+Browser/PWA mode uses `localStorage` for settings and posts extraction requests
+to `/api/extract`. The Vercel Function receives the user's API key and uploaded
+media only for that request, forwards it to the selected provider, and returns
+structured events. Offline support is limited to the installable cached app
+shell; AI extraction still requires network access.
+
+To test installability locally, run `pnpm run build` and `pnpm run preview`,
+then check that `manifest.webmanifest` loads, the service worker registers, and
+the app shell reloads from cache.
+
+## Vercel deployment
+
+Vercel can deploy this as a Vite app:
+
+```bash
+pnpm install
+pnpm run build
+```
+
+The static output is `dist/`, and `api/extract.ts` is deployed as the server-side
+proxy for browser/PWA extraction. `vercel.json` pins the Vite framework,
+`pnpm run build`, and `dist/` output directory.
 
 ## Desktop (macOS / Windows / Linux)
 
@@ -83,6 +115,9 @@ run's artifacts or the generated pre-release and install it.
 
 ## Notes
 
+- Use `pnpm run tauri dev` when validating native storage, native HTTP,
+  packaging, or other Tauri plugin behavior. Use `pnpm run dev` for normal
+  browser UI/PWA iteration.
 - **Permissions / capabilities** live in `src-tauri/capabilities/default.json`.
   The HTTP plugin scope there whitelists the configured AI provider endpoints
   for Gemini, Anthropic, OpenAI, and OpenRouter; add hosts if you route through
