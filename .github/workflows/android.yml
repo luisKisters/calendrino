@@ -1,0 +1,104 @@
+name: Android APK
+
+# Builds an Android APK on every push to the `release` branch (and on manual
+# dispatch). The APK is uploaded as a build artifact and attached to a GitHub
+# pre-release. Without signing secrets it produces an installable *debug* APK;
+# with secrets configured it produces a *signed release* APK. See BUILDING.md.
+
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Rust (with Android targets)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Point Tauri at the preinstalled NDK
+        run: echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Initialize Android project
+        run: npm run tauri android init
+
+      - name: Detect signing secrets
+        id: signing
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEY_BASE64 }}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No ANDROID_KEY_BASE64 secret set — building an installable DEBUG APK. See BUILDING.md to enable signed release builds."
+          fi
+
+      - name: Set up release signing
+        if: steps.signing.outputs.enabled == 'true'
+        run: |
+          cd src-tauri/gen/android
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > keystore.properties
+          echo "password=${{ secrets.ANDROID_KEY_PASSWORD }}" >> keystore.properties
+          base64 -d <<< "${{ secrets.ANDROID_KEY_BASE64 }}" > "$RUNNER_TEMP/keystore.jks"
+          echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
+
+      - name: Build signed release APK
+        if: steps.signing.outputs.enabled == 'true'
+        run: npm run tauri android build -- --apk
+
+      - name: Build debug APK (no signing secrets)
+        if: steps.signing.outputs.enabled != 'true'
+        run: npm run tauri android build -- --apk --debug
+
+      - name: Collect APKs
+        run: |
+          mkdir -p artifacts
+          find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -exec cp {} artifacts/ \;
+          ls -la artifacts
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendrino-android-apk
+          path: artifacts/*.apk
+          if-no-files-found: error
+
+      - name: Publish GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-build-${{ github.run_number }}
+          name: Calendrino Android build #${{ github.run_number }}
+          prerelease: true
+          files: artifacts/*.apk
