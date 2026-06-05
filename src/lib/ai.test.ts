@@ -2,22 +2,26 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { extractEvents } from "./ai";
 
 const mocks = vi.hoisted(() => ({
-  generateObject: vi.fn(async () => ({ object: { events: [] } })),
-  createGoogleGenerativeAI: vi.fn(() => vi.fn((model: string) => ({ provider: "gemini", model }))),
-  createAnthropic: vi.fn(() => vi.fn((model: string) => ({ provider: "anthropic", model }))),
-  createOpenAI: vi.fn(() => vi.fn((model: string) => ({ provider: "openai", model }))),
-  createOpenAICompatible: vi.fn(() => vi.fn((model: string) => ({ provider: "openrouter", model }))),
+  isTauri: vi.fn(() => false),
+  extractEventsDirect: vi.fn(async () => []),
 }));
 
-vi.mock("ai", () => ({ generateObject: mocks.generateObject }));
-vi.mock("@ai-sdk/google", () => ({ createGoogleGenerativeAI: mocks.createGoogleGenerativeAI }));
-vi.mock("@ai-sdk/anthropic", () => ({ createAnthropic: mocks.createAnthropic }));
-vi.mock("@ai-sdk/openai", () => ({ createOpenAI: mocks.createOpenAI }));
-vi.mock("@ai-sdk/openai-compatible", () => ({ createOpenAICompatible: mocks.createOpenAICompatible }));
+vi.mock("./platform", () => ({
+  aiFetch: vi.fn(),
+  isTauri: mocks.isTauri,
+}));
+vi.mock("./aiCore", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./aiCore")>();
+  return {
+    ...actual,
+    extractEventsDirect: mocks.extractEventsDirect,
+  };
+});
 
 const baseInput = {
   bytes: new Uint8Array([1, 2, 3]),
   mediaType: "image/png",
+  provider: "openai",
   apiKey: "key",
   now: { isoDate: "2026-06-06", weekday: "Saturday", tz: "Europe/Berlin" },
 } as const;
@@ -25,36 +29,44 @@ const baseInput = {
 describe("extractEvents", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.isTauri.mockReturnValue(false);
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({ events: [] }), { status: 200 }));
   });
 
-  it("uses OpenAI provider with the selected model", async () => {
-    await extractEvents({ ...baseInput, provider: "openai", model: "gpt-4.1" });
+  it("uses the browser proxy outside Tauri", async () => {
+    await extractEvents(baseInput);
 
-    expect(mocks.createOpenAI).toHaveBeenCalledWith(expect.objectContaining({ apiKey: "key" }));
-    expect(mocks.generateObject).toHaveBeenCalledWith(expect.objectContaining({ model: { provider: "openai", model: "gpt-4.1" } }));
-  });
-
-  it("uses OpenRouter's default Kimi model when no override is set", async () => {
-    await extractEvents({ ...baseInput, provider: "openrouter" });
-
-    expect(mocks.createOpenAICompatible).toHaveBeenCalledWith(
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "/api/extract",
       expect.objectContaining({
-        name: "openrouter",
-        baseURL: "https://openrouter.ai/api/v1",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const [, init] = vi.mocked(globalThis.fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual(
+      expect.objectContaining({
+        mediaBase64: "AQID",
+        mediaType: "image/png",
+        provider: "openai",
         apiKey: "key",
       }),
     );
-    expect(mocks.generateObject).toHaveBeenCalledWith(
-      expect.objectContaining({ model: { provider: "openrouter", model: "moonshotai/kimi-k2.6" } }),
-    );
+    expect(mocks.extractEventsDirect).not.toHaveBeenCalled();
   });
 
-  it("rejects unsupported PDFs before calling a provider", async () => {
-    await expect(extractEvents({ ...baseInput, provider: "anthropic", mediaType: "application/pdf" })).rejects.toThrow(
-      "Use Gemini or OpenRouter for PDFs",
-    );
+  it("converts proxy errors into app errors", async () => {
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({ error: "Invalid API key." }), { status: 401 }));
 
-    expect(mocks.createAnthropic).not.toHaveBeenCalled();
-    expect(mocks.generateObject).not.toHaveBeenCalled();
+    await expect(extractEvents(baseInput)).rejects.toThrow("Invalid API key.");
+  });
+
+  it("keeps direct extraction in Tauri", async () => {
+    mocks.isTauri.mockReturnValue(true);
+
+    await extractEvents(baseInput);
+
+    expect(mocks.extractEventsDirect).toHaveBeenCalledWith(expect.objectContaining({ bytes: baseInput.bytes }));
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });

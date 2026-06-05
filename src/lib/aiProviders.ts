@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type AiProviderId = "gemini" | "anthropic" | "openai" | "openrouter";
 
 export interface AiProviderConfig {
@@ -63,3 +65,5 @@ export function getProviderConfig(provider: AiProviderId): AiProviderConfig {
 export function isAiProviderId(value: string): value is AiProviderId {
   return value in AI_PROVIDERS;
 }
+
+export const zAiProviderId = z.enum(["gemini", "anthropic", "openai", "openrouter"]);

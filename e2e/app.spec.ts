@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("settings supports OpenRouter Kimi default and editable model", async ({ page }) => {
+  await page.addInitScript(() => localStorage.clear());
   await page.goto("/");
 
   await expect(page.getByText("Welcome to Calendrino")).toBeVisible();
