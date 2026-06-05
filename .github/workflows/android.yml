@@ -28,7 +28,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
+          cache: pnpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.5
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -53,7 +58,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock', 'package-lock.json') }}
+          key: gradle-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock', 'pnpm-lock.yaml') }}
           restore-keys: |
             gradle-${{ runner.os }}-
 
@@ -61,10 +66,16 @@ jobs:
         run: echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run tests
+        run: pnpm run test:all
 
       - name: Initialize Android project
-        run: npm run tauri android init
+        run: pnpm run tauri android init
 
       - name: Detect signing secrets
         id: signing
@@ -78,7 +89,7 @@ jobs:
 
       - name: Build release APK (unsigned, arm64)
         if: steps.signing.outputs.enabled == 'true'
-        run: npm run tauri android build -- --apk --target aarch64
+        run: pnpm run tauri android build -- --apk --target aarch64
 
       - name: Sign release APK with apksigner
         if: steps.signing.outputs.enabled == 'true'
@@ -108,7 +119,7 @@ jobs:
 
       - name: Build debug APK (arm64, no signing secrets)
         if: steps.signing.outputs.enabled != 'true'
-        run: npm run tauri android build -- --apk --debug --target aarch64
+        run: pnpm run tauri android build -- --apk --debug --target aarch64
 
       - name: Collect debug APK
         if: steps.signing.outputs.enabled != 'true'
@@ -124,10 +135,11 @@ jobs:
           path: artifacts/*.apk
           if-no-files-found: error
 
-      - name: Publish GitHub pre-release
+      - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-build-${{ github.run_number }}
           name: Calendrino Android build #${{ github.run_number }}
-          prerelease: true
+          prerelease: false
+          make_latest: true
           files: artifacts/*.apk

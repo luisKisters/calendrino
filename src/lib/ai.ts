@@ -1,11 +1,12 @@
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateObject } from "ai";
 import { EventsSchema, type CalendarEvent } from "./schema";
 import { aiFetch } from "./platform";
 import type { NowContext } from "./datetime";
-
-// Gemini 3.1 Pro. `gemini-3-pro-preview` was retired 2026-03-26; use 3.1.
-const MODEL_ID = "gemini-3.1-pro-preview";
+import { getProviderConfig, type AiProviderId } from "./aiProviders";
 
 function systemPrompt(now: NowContext): string {
   return [
@@ -28,15 +29,54 @@ function systemPrompt(now: NowContext): string {
 export interface ExtractInput {
   bytes: Uint8Array;
   mediaType: string;
+  provider: AiProviderId;
   apiKey: string;
+  model?: string;
   now: NowContext;
 }
 
-/** Send the captured file to Gemini and return the structured events it finds. */
+function modelFor(input: ExtractInput) {
+  const modelId = input.model?.trim() || getProviderConfig(input.provider).defaultModel;
+  switch (input.provider) {
+    case "gemini": {
+      const google = createGoogleGenerativeAI({ apiKey: input.apiKey, fetch: aiFetch });
+      return google(modelId);
+    }
+    case "anthropic": {
+      const anthropic = createAnthropic({ apiKey: input.apiKey, fetch: aiFetch });
+      return anthropic(modelId);
+    }
+    case "openai": {
+      const openai = createOpenAI({ apiKey: input.apiKey, fetch: aiFetch });
+      return openai(modelId);
+    }
+    case "openrouter": {
+      const openrouter = createOpenAICompatible({
+        name: "openrouter",
+        apiKey: input.apiKey,
+        baseURL: "https://openrouter.ai/api/v1",
+        fetch: aiFetch,
+      });
+      return openrouter(modelId);
+    }
+  }
+}
+
+function assertMediaSupported(input: ExtractInput): void {
+  const config = getProviderConfig(input.provider);
+  if (input.mediaType === "application/pdf" && !config.supportsPdfs) {
+    throw new Error(`${config.label} does not support PDFs in Calendrino yet. Use Gemini or OpenRouter for PDFs.`);
+  }
+  if (input.mediaType.startsWith("image/") && !config.supportsImages) {
+    throw new Error(`${config.label} does not support images in Calendrino yet.`);
+  }
+}
+
+/** Send the captured file to the selected AI provider and return structured events. */
 export async function extractEvents(input: ExtractInput): Promise<CalendarEvent[]> {
-  const google = createGoogleGenerativeAI({ apiKey: input.apiKey, fetch: aiFetch });
+  assertMediaSupported(input);
   const { object } = await generateObject({
-    model: google(MODEL_ID),
+    model: modelFor(input),
     schema: EventsSchema,
     system: systemPrompt(input.now),
     messages: [

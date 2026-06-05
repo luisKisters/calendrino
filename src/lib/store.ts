@@ -1,8 +1,20 @@
 import { isTauri } from "./platform";
 import type { Store } from "@tauri-apps/plugin-store";
+import { AI_PROVIDERS, isAiProviderId, type AiProviderId } from "./aiProviders";
 
 const STORE_FILE = "settings.json";
-const API_KEY = "geminiApiKey";
+const LEGACY_API_KEY = "geminiApiKey";
+const AI_SETTINGS = "aiSettings.v1";
+
+export interface ProviderSettings {
+  apiKey: string;
+  model?: string;
+}
+
+export interface AiSettings {
+  selectedProvider: AiProviderId;
+  providers: Partial<Record<AiProviderId, ProviderSettings>>;
+}
 
 let storePromise: Promise<Store> | null = null;
 async function getStore(): Promise<Store> {
@@ -14,32 +26,86 @@ async function getStore(): Promise<Store> {
   return storePromise;
 }
 
-/** Read the saved Gemini API key (Tauri store on native, localStorage on web). */
-export async function getApiKey(): Promise<string | null> {
+async function readValue(key: string): Promise<unknown> {
   if (isTauri()) {
     const s = await getStore();
-    return (await s.get<string>(API_KEY)) ?? null;
+    return await s.get(key);
   }
-  return localStorage.getItem(API_KEY);
-}
-
-export async function setApiKey(key: string): Promise<void> {
-  const trimmed = key.trim();
-  if (isTauri()) {
-    const s = await getStore();
-    await s.set(API_KEY, trimmed);
-    await s.save();
-  } else {
-    localStorage.setItem(API_KEY, trimmed);
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
   }
 }
 
-export async function clearApiKey(): Promise<void> {
+async function writeValue(key: string, value: unknown): Promise<void> {
   if (isTauri()) {
     const s = await getStore();
-    await s.delete(API_KEY);
+    await s.set(key, value);
     await s.save();
   } else {
-    localStorage.removeItem(API_KEY);
+    localStorage.setItem(key, JSON.stringify(value));
   }
+}
+
+async function deleteValue(key: string): Promise<void> {
+  if (isTauri()) {
+    const s = await getStore();
+    await s.delete(key);
+    await s.save();
+  } else {
+    localStorage.removeItem(key);
+  }
+}
+
+function normalizeSettings(value: unknown): AiSettings | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<AiSettings>;
+  const selectedProvider =
+    typeof candidate.selectedProvider === "string" && isAiProviderId(candidate.selectedProvider)
+      ? candidate.selectedProvider
+      : "gemini";
+  const providers: AiSettings["providers"] = {};
+  if (candidate.providers && typeof candidate.providers === "object") {
+    for (const id of Object.keys(AI_PROVIDERS) as AiProviderId[]) {
+      const saved = candidate.providers[id];
+      if (!saved || typeof saved !== "object" || typeof saved.apiKey !== "string") continue;
+      providers[id] = {
+        apiKey: saved.apiKey,
+        model: typeof saved.model === "string" && saved.model.trim() ? saved.model : undefined,
+      };
+    }
+  }
+  return { selectedProvider, providers };
+}
+
+export function emptyAiSettings(): AiSettings {
+  return { selectedProvider: "gemini", providers: {} };
+}
+
+export async function getAiSettings(): Promise<AiSettings> {
+  const saved = normalizeSettings(await readValue(AI_SETTINGS));
+  if (saved) return saved;
+
+  const legacy = await readValue(LEGACY_API_KEY);
+  if (typeof legacy === "string" && legacy.trim()) {
+    const migrated: AiSettings = {
+      selectedProvider: "gemini",
+      providers: { gemini: { apiKey: legacy.trim() } },
+    };
+    await setAiSettings(migrated);
+    return migrated;
+  }
+
+  return emptyAiSettings();
+}
+
+export async function setAiSettings(settings: AiSettings): Promise<void> {
+  await writeValue(AI_SETTINGS, settings);
+}
+
+export async function clearAiSettings(): Promise<void> {
+  await deleteValue(AI_SETTINGS);
 }

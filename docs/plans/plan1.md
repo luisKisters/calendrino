@@ -63,7 +63,7 @@ Tauri builds **native** apps; it does **not** deploy to the browser. But our
 frontend is plain web tech, so the *same* React app can be shipped as a **PWA**
 later (V0.1+) with capability fallbacks (`window.open` instead of the opener
 plugin, browser `fetch` instead of the Tauri one). For V0 we get "browser" for
-free as a **dev/test target** (`npm run dev`), and treat a real hosted PWA as a
+free as a **dev/test target** (`pnpm run dev`), and treat a real hosted PWA as a
 later milestone. Android is the priority per the brainstorm.
 
 ## 4. Architecture / data flow
@@ -193,9 +193,9 @@ Keep it one‑thumb usable, mobile‑first, big tap targets.
 > not run here — they need the Android SDK; steps are in
 > [`BUILDING.md`](../../BUILDING.md).
 
-- [x] **M0 — Scaffold.** `npm create tauri-app@latest` (React + TS + Vite,
+- [x] **M0 — Scaffold.** `pnpm create tauri-app@latest` (React + TS + Vite,
       app name `calendrino`). Add Tailwind. App boots on desktop.
-- [ ] **M1 — Android target.** Install Android Studio + NDK; `npm run tauri
+- [ ] **M1 — Android target.** Install Android Studio + NDK; `pnpm run tauri
       android init`; run on emulator/device. App boots on Android.
 - [x] **M2 — Plugins.** Add `plugin-http`, `plugin-opener`, `plugin-store`,
       `plugin-dialog`; wire capabilities/permissions in `tauri.conf.json` +
@@ -219,22 +219,22 @@ Keep it one‑thumb usable, mobile‑first, big tap targets.
 ## 10. Scaffolding commands (reference)
 
 ```bash
-# Scaffold (choose: React, TypeScript, npm)
-npm create tauri-app@latest calendrino
+# Scaffold (choose: React, TypeScript, pnpm)
+pnpm create tauri-app@latest calendrino
 
 cd calendrino
 # Mobile target (after Android Studio + Rust targets installed)
-npm run tauri android init
+pnpm run tauri android init
 
 # Frontend deps
-npm i ai @ai-sdk/google zod
-npm i @tauri-apps/plugin-http @tauri-apps/plugin-opener \
+pnpm add ai @ai-sdk/google zod
+pnpm add @tauri-apps/plugin-http @tauri-apps/plugin-opener \
       @tauri-apps/plugin-store @tauri-apps/plugin-dialog
-npm i -D tailwindcss @tailwindcss/vite
+pnpm add -D tailwindcss @tailwindcss/vite
 
 # Run
-npm run tauri dev              # desktop
-npm run tauri android dev      # Android emulator/device
+pnpm run tauri dev              # desktop
+pnpm run tauri android dev      # Android emulator/device
 ```
 
 ```ts

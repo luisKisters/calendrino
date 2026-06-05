@@ -1,0 +1,1 @@
+- New tests must be added to CI by installing the required test browsers after dependency installation and running `pnpm run test:all` before build steps.

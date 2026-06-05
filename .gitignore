@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+test-results
+playwright-report
 
 # Android signing — never commit keystores or signing config
 *.jks

@@ -1,19 +1,19 @@
 # Building Calendrino
 
 V0 targets **Android** (primary) and **macOS / desktop**. The same React frontend
-also runs in the browser for quick UI iteration (`npm run dev`).
+also runs in the browser for quick UI iteration (`pnpm run dev`).
 
 ## Prerequisites (all platforms)
 
-- **Node 20+** and npm
+- **Node 20+** and pnpm
 - **Rust** via [rustup](https://rustup.rs) (`rustc`, `cargo` on `PATH`)
-- Project deps installed: `npm install`
+- Project deps installed: `pnpm install`
 
 ## Desktop (macOS / Windows / Linux)
 
 ```bash
-npm run tauri dev      # dev with hot reload
-npm run tauri build    # production bundle (.app/.dmg on macOS)
+pnpm run tauri dev      # dev with hot reload
+pnpm run tauri build    # production bundle (.app/.dmg on macOS)
 ```
 
 macOS code-signing/notarization (for distribution) is configured under
@@ -43,12 +43,12 @@ required for local runs.
    ```
 4. **Initialize + run**:
    ```bash
-   npm run tauri android init      # generates src-tauri/gen/android
-   npm run tauri android dev       # run on emulator/device
+   pnpm run tauri android init      # generates src-tauri/gen/android
+   pnpm run tauri android dev       # run on emulator/device
    ```
 5. **Release build & signing** (M9):
    ```bash
-   npm run tauri android build     # produces an .aab / .apk
+   pnpm run tauri android build     # produces an .aab / .apk
    ```
    Create an upload keystore and configure signing in the generated
    `src-tauri/gen/android` Gradle project (or via Play App Signing). See
@@ -60,8 +60,8 @@ Requires macOS + Xcode and an Apple Developer account.
 
 ```bash
 rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
-npm run tauri ios init
-npm run tauri ios dev
+pnpm run tauri ios init
+pnpm run tauri ios dev
 ```
 
 ## Continuous integration (Android APK)
@@ -84,9 +84,9 @@ run's artifacts or the generated pre-release and install it.
 ## Notes
 
 - **Permissions / capabilities** live in `src-tauri/capabilities/default.json`.
-  The HTTP plugin scope there whitelists the Gemini endpoint
-  (`https://generativelanguage.googleapis.com/*`); add hosts if you switch
-  providers (e.g. an AI Gateway endpoint).
+  The HTTP plugin scope there whitelists the configured AI provider endpoints
+  for Gemini, Anthropic, OpenAI, and OpenRouter; add hosts if you route through
+  another gateway.
 - **Mobile camera/mic**: V0 uses a web `<input capture>` for the camera (no extra
   permission plumbing). Voice capture (microphone) is a later milestone and will
   need `NSMicrophoneUsageDescription` (iOS) and `RECORD_AUDIO` (Android).

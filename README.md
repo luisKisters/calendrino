@@ -1,8 +1,8 @@
 # Calendrino
 
 Turn a photo, screenshot, or PDF into a Google Calendar event in seconds — using
-**your own** Gemini API key. Built with **Tauri 2** (Android · macOS · desktop)
-and **React**.
+**your own** AI provider API key. Built with **Tauri 2** (Android · macOS ·
+desktop) and **React**.
 
 > **Status: V0 (v0.0001).** The thinnest useful slice: capture → AI extracts the
 > event(s) → you confirm → Google Calendar opens pre-filled. No account, no
@@ -12,37 +12,38 @@ and **React**.
 ## How it works
 
 1. **Capture** — take a photo or upload an image/PDF.
-2. **Extract** — the file is sent to **Gemini 3.1 Pro** (`gemini-3.1-pro-preview`)
-   via the Vercel AI SDK, which returns structured events (Zod-validated).
+2. **Extract** — the file is sent to your selected AI provider via the Vercel AI
+   SDK, which returns structured events (Zod-validated). Supported providers are
+   Gemini, Anthropic, OpenAI, and OpenRouter.
 3. **Confirm** — review/edit the detected event(s).
 4. **Add** — opens the Google Calendar "create event" form, pre-filled.
 
-No backend: on native, the AI request goes **straight from the app to Google**
-using the Tauri HTTP plugin (which bypasses webview CORS) with your own key.
-Nothing is proxied or stored on a server.
+No backend: on native, the AI request goes **straight from the app to the
+selected provider** using the Tauri HTTP plugin (which bypasses webview CORS)
+with your own key. Nothing is proxied or stored on a server.
 
 ## Quick start (desktop)
 
 Prerequisites: **Node 20+** and **Rust** (via [rustup](https://rustup.rs)).
 
 ```bash
-npm install
-npm run tauri dev      # launches the desktop app
+pnpm install
+pnpm run tauri dev      # launches the desktop app
 ```
 
-On first launch, paste a Gemini API key — get a free one at
-<https://aistudio.google.com/apikey>. The key is stored only on your device.
+On first launch, choose Gemini, Anthropic, OpenAI, or OpenRouter and paste your
+API key. The key is stored only on your device.
 
 Frontend-only preview (UI in the browser; native APIs/AI call won't work there):
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 ## Build
 
 ```bash
-npm run tauri build    # desktop bundle for the current OS
+pnpm run tauri build    # desktop bundle for the current OS
 ```
 
 Android & iOS: see [`BUILDING.md`](BUILDING.md).
@@ -54,7 +55,7 @@ Android & iOS: see [`BUILDING.md`](BUILDING.md).
 | Shell | Tauri 2 (Rust) |
 | Frontend | React 19 + TypeScript + Vite |
 | Styling | Tailwind CSS v4 |
-| AI | Vercel AI SDK (`ai`) + `@ai-sdk/google`, model `gemini-3.1-pro-preview` |
+| AI | Vercel AI SDK (`ai`) + Gemini, Anthropic, OpenAI, OpenRouter providers |
 | Validation | Zod |
 | Tauri plugins | `http` (CORS-free AI calls), `opener` (open GCal), `store` (key storage), `dialog` |
 
@@ -78,5 +79,17 @@ docs/plans/       PRD, plan1 (V0), ideas (roadmap)
 ## Privacy
 
 Local-first. Your API key lives on-device (V0 uses the store plugin; hardening to
-the OS keychain is a planned follow-up). Captured files are sent only to Google
-with your key. There is no Calendrino server.
+the OS keychain is a planned follow-up). Captured files are sent only to the
+selected AI provider with your key. There is no Calendrino server.
+
+## Provider defaults
+
+| Provider | Default model | Images | PDFs |
+|---|---|---:|---:|
+| Gemini | `gemini-3.1-pro-preview` | Yes | Yes |
+| Anthropic | `claude-sonnet-4-5-20250929` | Yes | No |
+| OpenAI | `gpt-4.1` | Yes | No |
+| OpenRouter | `moonshotai/kimi-k2.6` | Yes | Yes |
+
+Model IDs are editable in Settings. PDF uploads are currently enabled for Gemini
+and OpenRouter only.
