@@ -1,0 +1,27 @@
+So I want to have a app that basically just takes um takes an PDF image or just like something captured from on like using like a camera um and puts it into Google Calendar automatically into like one into like a selected calendar there should it should be possible to add multiple calendars.
+
+I want it to be um an React native app now let me think Yeah, actually I want to use Tao Tauri T-R-U-R-I to for to make the app. Um I don't care what the stack is. I just want it that it works on mobile, works like preferably native, just my I just want that it works on Android, iOS, and browser and macOS basically.
+
+That's what I want. I think Tauri fits that pretty well and that it's like really fast to develop and preferably native or like just really, really fast. I just need it to be fast. And that you can basically put in a PDF, voice, image, um whatever, and even like share to the app using like the integrated share model that is like on operating system.
+
+We also you also can reuse React Native whatever you think but you can that you also can use the share modal to share something and that um it has the quick tile service I think it's called so that you can like swipe down on Android and like click one of these tiles and then it opens up like a capture thing basically.
+
+Like and the capture thing should be like camera plus um camera should have like three buttons it should by by default like open the camera but under it it should have like a file button and like a voice button on the and on the voice button you just input like a voice message and tell uh say one when the event is and on the file button you submit like any document basically.
+
+Um yeah. And it uses Gemini 3.1 Pro for the request using uh I don't know some yeah it's using actually um versal AI gateway um Um yeah, I forgot to t say what the app does. Basically the app th what the app does is that you take a picture, make a voice recording or upload like any like um file and it creates and it's like suggests like what calendar create uh calendar events could be created from it and um yeah then you can open like then it like opens aft after confirming the calendar event it opens the event in Google Calendar or even better actually like if it's just a single event make it so that it automatically opens the Google Calendar app with the basically calendar event like already with like a new create new calendar event model like the dialogue thing not dialogue the modal thing that oh um and that yeah, already all details are filled in.
+
+I think Google Maps uses that. Perhaps it's using a URI or something like that. Basically, like do lots of research on what the the best tag stack is. Um What like a solid user experience is think of one and how all the things I said or most of the things should could be matched most important is like and that it works on Android and is fast and um that you can use Gemini API but also would be nice to be able to also use all kinds of different models and I think AI gateway gateway is a pretty nice solution for solution for that.
+
+Um yeah. And users should be able to bring their own API keys and not you and shouldn't be forced to use like someone else's API key and they should be able to connect their calendar and like that the ca and or actually even um connect multiple calendars and it s like stays connected and actually for now just like build like um like a first version of it like make a make an make an idea of like a version 0.0001 that is basically la just like uses already the correct tag stack but um basically I think for now just adds the event to Google Calendar by basically calling, I think it might be the URI or basically like the thing that opens up the event thing in Google that pre-fills it and you just take an image or upload a file.
+
+That's the both functionality I need. I don't need tile functionality yet. I don't need um any functionality yet except for just I open the app. Then with that I take a picture of something or upload a file or share to the app.
+
+That's also a feature that's relevant for me. But I mean that is that isn't the most necessary, that's a actually version like 0.002 uh yeah yeah that's what I want make like um make like a plan for the first version that is that like just the app where you can like take a image, upload a file, then it calls the Gemini API and then basically opens uh asks you to basically then opened the event and Google Calendar already pre-filled like that is the first version also like make a file to plan the other stuff and um yeah But like firstly focus on the first version, but also include in the file all the other ideas and um yeah don't ask any questions yet using the regarding the first version.
+
+I think convex is a pretty good fit for that or pocket db I don't mean I don't mind I think pocket db I mean I I think wait is there a free T for that let me see. Pocket base I meant, sorry. Actually pocket base I mean I don't know tell me how much resources it takes.
+
+I mean I can self-host it, but I think um convex is pretty nice, but I don't need to use it. This is fine if we use something else, but I've used it before and I liked it and yeah but as I said for now just make like a bare bones version of the app.
+
+Um make like leave this transcript as it is create a ver create a um like an ideas dot md and la and an plan one dot md and if you have like actually cr questions you can't really answer then yeah, then consider um actually um asking me.
+
+Yeah then ask me. Yeah. 
