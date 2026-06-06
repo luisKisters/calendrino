@@ -67,6 +67,13 @@ export default function App() {
         model: providerSettings.model,
         now: nowContext(),
       });
+      // A single event is the common case: open Google Calendar straight away so
+      // the user doesn't have to tap "Add". Best-effort — on web a popup blocker
+      // may swallow it after the await, so we still land on the review screen,
+      // where the same event is one tap away as a fallback.
+      if (events.length === 1) {
+        await openExternal(buildGCalUrl(events[0]));
+      }
       setScreen({ name: "review", events });
     } catch (err) {
       setScreen(classifyError(err, config.label));

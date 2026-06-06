@@ -94,4 +94,45 @@ describe("App", () => {
     await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalledWith(expect.objectContaining({ provider: "openrouter" })));
     expect(await screen.findByDisplayValue("Board meeting")).toBeInTheDocument();
   });
+
+  it("opens Google Calendar immediately when exactly one event is extracted", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openrouter",
+      providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
+    });
+
+    const { container } = render(<App />);
+    await screen.findByText("Capture an event");
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    await waitFor(() =>
+      expect(mocks.openExternal).toHaveBeenCalledWith(expect.stringContaining("calendar.google.com")),
+    );
+    // Still lands on review as a fallback (e.g. if a popup blocker swallows the open).
+    expect(await screen.findByDisplayValue("Board meeting")).toBeInTheDocument();
+  });
+
+  it("does not auto-open the calendar when multiple events are extracted", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openrouter",
+      providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
+    });
+    mocks.extractEvents.mockResolvedValue([
+      { title: "Standup", start: "2026-06-10T09:00:00", end: "2026-06-10T09:30:00", allDay: false, location: null, description: null, timezone: null, confidence: 0.9 },
+      { title: "Lunch", start: "2026-06-10T12:00:00", end: "2026-06-10T13:00:00", allDay: false, location: null, description: null, timezone: null, confidence: 0.8 },
+    ]);
+
+    const { container } = render(<App />);
+    await screen.findByText("Capture an event");
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    expect(await screen.findByText("2 events found")).toBeInTheDocument();
+    expect(mocks.openExternal).not.toHaveBeenCalled();
+  });
 });

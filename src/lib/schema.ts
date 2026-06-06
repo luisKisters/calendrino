@@ -8,8 +8,11 @@ export const EventSchema = z.object({
    * For all-day events this may be a date only, e.g. "2026-06-12".
    */
   start: z.string().describe("ISO 8601 local start (no Z / no offset)"),
-  /** Local end; null means unknown -> default to start +1h (timed) or +1 day (all-day). */
-  end: z.string().nullable().describe("ISO 8601 local end, or null"),
+  /** Local end. Always set for timed events (estimate a sensible duration if not stated); null only for all-day events. */
+  end: z
+    .string()
+    .nullable()
+    .describe("ISO 8601 local end; always set for timed events, null only for all-day"),
   allDay: z.boolean().describe("True for date-only events with no specific time"),
   location: z.string().nullable().describe("Location, or null"),
   description: z.string().nullable().describe("Extra details / notes, or null"),

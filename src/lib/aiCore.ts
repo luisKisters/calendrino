@@ -2,7 +2,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { generateObject } from "ai";
+import { generateObject, type JSONValue } from "ai";
 import { getProviderConfig, type AiProviderId } from "./aiProviders";
 import type { NowContext } from "./datetime";
 import { EventsSchema, type CalendarEvent } from "./schema";
@@ -25,7 +25,11 @@ function systemPrompt(now: NowContext): string {
     '- Resolve relative dates ("tomorrow", "next Friday") against today.',
     "- Use local wall-clock ISO 8601 WITHOUT any timezone suffix for start/end",
     "  (e.g. 2026-06-12T19:30:00). For all-day events use a date only (2026-06-12).",
-    "- If no end time is stated, set end to null.",
+    "- Always give timed events a sensible end time. Use the stated end if present;",
+    "  otherwise estimate a realistic duration from the event type (meeting or",
+    "  appointment ~1h, meal ~1.5h, party or concert ~3h, flight from its route) so",
+    "  the event has a plausible length. The end MUST be after the start. Only leave",
+    "  end null for all-day events or when no reasonable duration can be inferred.",
     "- Set allDay=true only for date-only events with no specific time.",
     "- Set timezone (IANA, e.g. Europe/Berlin) ONLY if the source explicitly implies",
     "  a specific timezone (e.g. a flight or a webinar in another city); otherwise null.",
@@ -63,6 +67,30 @@ function modelFor(input: DirectExtractInput) {
   }
 }
 
+/**
+ * Per-provider tuning so extraction is fast and deterministic: a low temperature
+ * where the provider supports it, and the lightest available reasoning/thinking
+ * setting so the model doesn't spend time "thinking" on a simple extraction.
+ */
+function callTuning(provider: AiProviderId): {
+  temperature?: number;
+  providerOptions?: Record<string, Record<string, JSONValue>>;
+} {
+  switch (provider) {
+    case "gemini":
+      // Gemini 3 always reasons; "low" keeps it quick without a long thinking pass.
+      return { temperature: 0, providerOptions: { google: { thinkingConfig: { thinkingLevel: "low" } } } };
+    case "anthropic":
+      // Haiku 4.5 has extended thinking off by default — just pin determinism.
+      return { temperature: 0 };
+    case "openai":
+      // GPT-5.x reasoning models reject `temperature`; minimise reasoning for speed instead.
+      return { providerOptions: { openai: { reasoningEffort: "minimal" } } };
+    case "openrouter":
+      return { temperature: 0 };
+  }
+}
+
 export function assertMediaSupported(input: Pick<DirectExtractInput, "mediaType" | "provider">): void {
   const config = getProviderConfig(input.provider);
   if (input.mediaType === "application/pdf" && !config.supportsPdfs) {
@@ -79,6 +107,7 @@ export async function extractEventsDirect(input: DirectExtractInput): Promise<Ca
     model: modelFor(input),
     schema: EventsSchema,
     system: systemPrompt(input.now),
+    ...callTuning(input.provider),
     messages: [
       {
         role: "user",
