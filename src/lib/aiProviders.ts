@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export type AiProviderId = "gemini" | "anthropic" | "openai" | "openrouter";
+export type AiProviderId = "gemini" | "anthropic" | "openai" | "openrouter" | "wandb" | "deepseek";
 
 export interface AiProviderConfig {
   id: AiProviderId;
@@ -54,9 +54,41 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProviderConfig> = {
     supportsPdfs: true,
     keyHelpUrl: "https://openrouter.ai/keys",
   },
+  // Weights & Biases Inference serves Kimi K2 far faster than OpenRouter's
+  // upstream, so it's the preferred home for Kimi. OpenAI-compatible endpoint.
+  wandb: {
+    id: "wandb",
+    label: "Weights & Biases",
+    apiKeyLabel: "W&B API key",
+    apiKeyPlaceholder: "wandb-...",
+    defaultModel: "moonshotai/Kimi-K2.6",
+    supportsImages: true,
+    supportsPdfs: true,
+    keyHelpUrl: "https://wandb.ai/authorize",
+  },
+  deepseek: {
+    id: "deepseek",
+    // DeepSeek's chat API (incl. deepseek-v4-flash) accepts text only — it
+    // rejects image/file message parts ("unknown variant image_url"). It's
+    // wired up for when a vision model lands, but can't read captures yet.
+    label: "DeepSeek",
+    apiKeyLabel: "DeepSeek API key",
+    apiKeyPlaceholder: "sk-...",
+    defaultModel: "deepseek-v4-flash",
+    supportsImages: false,
+    supportsPdfs: false,
+    keyHelpUrl: "https://platform.deepseek.com/api_keys",
+  },
 };
 
-export const AI_PROVIDER_ORDER: AiProviderId[] = ["gemini", "anthropic", "openai", "openrouter"];
+export const AI_PROVIDER_ORDER: AiProviderId[] = [
+  "gemini",
+  "anthropic",
+  "openai",
+  "openrouter",
+  "wandb",
+  "deepseek",
+];
 
 export function getProviderConfig(provider: AiProviderId): AiProviderConfig {
   return AI_PROVIDERS[provider];
@@ -66,4 +98,4 @@ export function isAiProviderId(value: string): value is AiProviderId {
   return value in AI_PROVIDERS;
 }
 
-export const zAiProviderId = z.enum(["gemini", "anthropic", "openai", "openrouter"]);
+export const zAiProviderId = z.enum(["gemini", "anthropic", "openai", "openrouter", "wandb", "deepseek"]);

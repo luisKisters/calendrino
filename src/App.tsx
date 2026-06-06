@@ -52,7 +52,7 @@ export default function App() {
       setScreen({
         name: "error",
         message: "PDFs are not supported for this provider",
-        detail: `${config.label} does not support PDFs in Calendrino yet. Use Gemini or OpenRouter for PDFs.`,
+        detail: `${config.label} does not support PDFs in Calendrino yet. Use Gemini, OpenRouter, or Weights & Biases for PDFs.`,
       });
       return;
     }

@@ -99,4 +99,24 @@ describe("api/extract", () => {
       ],
     });
   });
+
+  // Regression: on the PWA every provider 400'd because the body arrived as a
+  // raw JSON string (unparsed) and Zod was handed a string instead of an object.
+  it("accepts a raw JSON string body (PWA proxy regression)", async () => {
+    const res = createRes();
+
+    await handler({ method: "POST", body: JSON.stringify(validBody) } as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(extractEventsDirect).toHaveBeenCalled();
+  });
+
+  it("accepts a Buffer body", async () => {
+    const res = createRes();
+
+    await handler({ method: "POST", body: Buffer.from(JSON.stringify(validBody)) } as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(extractEventsDirect).toHaveBeenCalled();
+  });
 });

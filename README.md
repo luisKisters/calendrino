@@ -14,7 +14,7 @@ desktop), **React**, and an installable web/PWA build.
 1. **Capture** — take a photo or upload an image/PDF.
 2. **Extract** — the file is sent to your selected AI provider via the Vercel AI
    SDK, which returns structured events (Zod-validated). Supported providers are
-   Gemini, Anthropic, OpenAI, and OpenRouter.
+   Gemini, Anthropic, OpenAI, OpenRouter, Weights & Biases, and DeepSeek.
 3. **Confirm** — review/edit the detected event(s).
 4. **Add** — opens the Google Calendar "create event" form, pre-filled.
 
@@ -55,6 +55,25 @@ pnpm run preview        # production-like local PWA preview
 
 Android & iOS: see [`BUILDING.md`](BUILDING.md).
 
+## Testing
+
+```bash
+pnpm run test       # unit tests (+ live extraction tests, see below)
+pnpm run test:e2e   # Playwright e2e (desktop + mobile viewport)
+pnpm run test:all   # both — this is what CI runs
+```
+
+Unit tests are fully mocked and always run. Alongside them,
+`src/test/integration/live.test.ts` runs **real** extraction against each
+provider — covering both the native (`extractEventsDirect`) and PWA
+(`/api/extract`) code paths — using a committed sample event as a PDF and a PNG
+(`src/test/fixtures/`, regenerate with `node scripts/make-fixtures.mjs`). A
+provider's live tests only run when its API key is in the environment
+(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`,
+`WANDB_API_KEY`, `DEEPSEEK_API_KEY`); otherwise they skip, and provider-side
+failures (no quota, bad key, model JSON-mode flakiness) skip rather than fail.
+In CI the keys come from GitHub Actions secrets, never the repo.
+
 ## Tech stack
 
 | | |
@@ -62,7 +81,7 @@ Android & iOS: see [`BUILDING.md`](BUILDING.md).
 | Shell | Tauri 2 (Rust) |
 | Frontend | React 19 + TypeScript + Vite |
 | Styling | Tailwind CSS v4 |
-| AI | Vercel AI SDK (`ai`) + Gemini, Anthropic, OpenAI, OpenRouter providers |
+| AI | Vercel AI SDK (`ai`) + Gemini, Anthropic, OpenAI, OpenRouter, W&B, DeepSeek providers |
 | Validation | Zod |
 | Tauri plugins | `http` (CORS-free AI calls), `opener` (open GCal), `store` (key storage), `dialog` |
 
@@ -99,9 +118,17 @@ Function, which forwards the extraction request and does not store them.
 | Provider | Default model | Images | PDFs |
 |---|---|---:|---:|
 | Gemini | `gemini-3.1-pro-preview` | Yes | Yes |
-| Anthropic | `claude-sonnet-4-5-20250929` | Yes | No |
-| OpenAI | `gpt-4.1` | Yes | No |
+| Anthropic | `claude-haiku-4-5` | Yes | No |
+| OpenAI | `gpt-5.4-mini` | Yes | No |
 | OpenRouter | `moonshotai/kimi-k2.6` | Yes | Yes |
+| Weights & Biases | `moonshotai/Kimi-K2.6` | Yes | Yes |
+| DeepSeek | `deepseek-v4-flash` | No | No |
 
-Model IDs are editable in Settings. PDF uploads are currently enabled for Gemini
-and OpenRouter only.
+Model IDs are editable in Settings. PDF uploads are enabled for Gemini,
+OpenRouter, and Weights & Biases.
+
+**Kimi K2.6:** OpenRouter's upstream is slow and intermittently fails JSON-mode
+extraction, so **Weights & Biases** ([W&B Inference](https://docs.wandb.ai/inference))
+is the recommended, faster home for Kimi. **DeepSeek** is wired up (with thinking
+disabled for fast, minimal-reasoning responses) but `deepseek-v4-flash` is
+text-only today — it rejects image/PDF parts, so it can't read captures yet.

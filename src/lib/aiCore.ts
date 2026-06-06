@@ -48,7 +48,14 @@ function modelFor(input: DirectExtractInput) {
       return google(modelId);
     }
     case "anthropic": {
-      const anthropic = createAnthropic({ apiKey: input.apiKey, fetch: fetchOverride });
+      const anthropic = createAnthropic({
+        apiKey: input.apiKey,
+        fetch: fetchOverride,
+        // The Tauri webview is a browser-origin context, so Anthropic's API
+        // rejects the direct call with a CORS error (surfaced as a 500 in-app)
+        // unless we opt in to direct browser access. Harmless server-side too.
+        headers: { "anthropic-dangerous-direct-browser-access": "true" },
+      });
       return anthropic(modelId);
     }
     case "openai": {
@@ -63,6 +70,24 @@ function modelFor(input: DirectExtractInput) {
         fetch: fetchOverride,
       });
       return openrouter(modelId);
+    }
+    case "wandb": {
+      const wandb = createOpenAICompatible({
+        name: "wandb",
+        apiKey: input.apiKey,
+        baseURL: "https://api.inference.wandb.ai/v1",
+        fetch: fetchOverride,
+      });
+      return wandb(modelId);
+    }
+    case "deepseek": {
+      const deepseek = createOpenAICompatible({
+        name: "deepseek",
+        apiKey: input.apiKey,
+        baseURL: "https://api.deepseek.com/v1",
+        fetch: fetchOverride,
+      });
+      return deepseek(modelId);
     }
   }
 }
@@ -88,13 +113,23 @@ function callTuning(provider: AiProviderId): {
       return { providerOptions: { openai: { reasoningEffort: "minimal" } } };
     case "openrouter":
       return { temperature: 0 };
+    case "wandb":
+      // Kimi K2 on W&B Inference — deterministic, no extra reasoning toggle.
+      return { temperature: 0 };
+    case "deepseek":
+      // DeepSeek V4 enables "thinking" by default; disable it for a fast,
+      // minimal-reasoning extraction. The flag is forwarded into the request
+      // body by the openai-compatible provider under its `deepseek` namespace.
+      return { temperature: 0, providerOptions: { deepseek: { thinking: { type: "disabled" } } } };
   }
 }
 
 export function assertMediaSupported(input: Pick<DirectExtractInput, "mediaType" | "provider">): void {
   const config = getProviderConfig(input.provider);
   if (input.mediaType === "application/pdf" && !config.supportsPdfs) {
-    throw new Error(`${config.label} does not support PDFs in Calendrino yet. Use Gemini or OpenRouter for PDFs.`);
+    throw new Error(
+      `${config.label} does not support PDFs in Calendrino yet. Use Gemini, OpenRouter, or Weights & Biases for PDFs.`,
+    );
   }
   if (input.mediaType.startsWith("image/") && !config.supportsImages) {
     throw new Error(`${config.label} does not support images in Calendrino yet.`);

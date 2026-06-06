@@ -13,6 +13,26 @@ function decodeMedia(mediaBase64: string): Uint8Array {
   return Uint8Array.from(Buffer.from(mediaBase64, "base64"));
 }
 
+/**
+ * Vercel usually parses JSON bodies for us, but depending on the deployment
+ * runtime / content-type the body can arrive as a raw string or Buffer. When
+ * that happened the PWA proxy rejected every request with a 400 ("Invalid
+ * extraction request"), because Zod was handed a string instead of an object.
+ * Normalise to a parsed object before validation.
+ */
+function readJsonBody(body: unknown): unknown {
+  if (typeof body === "string" || body instanceof Buffer) {
+    const text = body.toString().trim();
+    if (!text) return undefined;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return undefined;
+    }
+  }
+  return body;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -20,7 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  const parsed = ExtractRequestPayloadSchema.safeParse(req.body);
+  const parsed = ExtractRequestPayloadSchema.safeParse(readJsonBody(req.body));
   if (!parsed.success) {
     jsonError(res, 400, "Invalid extraction request.");
     return;
