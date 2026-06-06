@@ -1,0 +1,37 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Calendrino mark">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#818CF8"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+  </defs>
+
+  <!-- squircle tile -->
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+
+  <!-- binding rings -->
+  <rect x="196" y="122" width="20" height="54" rx="10" fill="#ffffff"/>
+  <rect x="296" y="122" width="20" height="54" rx="10" fill="#ffffff"/>
+
+  <!-- calendar card -->
+  <rect x="132" y="150" width="248" height="242" rx="30" fill="#ffffff"/>
+
+  <!-- header divider -->
+  <rect x="160" y="206" width="192" height="6" rx="3" fill="#C7D2FE"/>
+
+  <!-- day dots -->
+  <g fill="#C7D2FE">
+    <rect x="181" y="247" width="30" height="22" rx="7"/>
+    <rect x="241" y="247" width="30" height="22" rx="7"/>
+    <rect x="301" y="247" width="30" height="22" rx="7"/>
+    <rect x="181" y="343" width="30" height="22" rx="7"/>
+    <rect x="301" y="343" width="30" height="22" rx="7"/>
+  </g>
+
+  <!-- the magic day: AI sparkle -->
+  <path d="M256 264 Q265 297 298 306 Q265 315 256 348 Q247 315 214 306 Q247 297 256 264 Z" fill="url(#spark)"/>
+</svg>

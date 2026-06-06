@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Calendrino — Home Screen, 5 Ways</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Archivo:wght@400;600;800;900&family=Archivo+Black&family=JetBrains+Mono:wght@400;500;700&family=Press+Start+2P&family=VT323&family=Inter:wght@400;500;600;700;900&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){ *{animation:none!important} }
+  body{margin:0;background:#0c0d12;color:#e8eaf2;font-family:"DM Sans",system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+  .mono{font-family:"JetBrains Mono",monospace}
+  a{color:inherit}
+
+  /* intro */
+  .intro{padding:74px 0 30px;text-align:center}
+  .intro .kicker{font-family:"JetBrains Mono";font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#8b93a7}
+  .intro h1{font-family:"Space Grotesk";font-weight:700;font-size:clamp(34px,6vw,62px);letter-spacing:-.02em;margin:14px 0 0;line-height:1.05}
+  .intro p{max-width:660px;margin:18px auto 0;color:#aab2c5;font-size:18px}
+  .legend{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+  .legend a{font-family:"JetBrains Mono";font-size:12px;text-decoration:none;color:#c7cdda;border:1px solid #2a2d3a;border-radius:999px;padding:7px 14px;transition:.2s}
+  .legend a:hover{border-color:#4a4f63;background:#16171f}
+
+  /* bands */
+  .band{padding:64px 0;border-top:1px solid rgba(255,255,255,.06)}
+  .band-grid{display:grid;grid-template-columns:1fr 320px;gap:46px;align-items:center}
+  @media(max-width:880px){.band-grid{grid-template-columns:1fr;gap:34px}.band-phone{order:-1;display:flex;justify-content:center}}
+  .scheme-no{font-family:"JetBrains Mono";font-size:13px;letter-spacing:.16em;color:#8b93a7}
+  .band h2{font-size:clamp(28px,4vw,40px);margin:6px 0 0;letter-spacing:-.02em}
+  .vibe{font-size:16px;margin:14px 0 0;max-width:520px}
+  .why{list-style:none;padding:0;margin:22px 0 0;display:flex;flex-direction:column;gap:9px}
+  .why li{font-size:13.5px;padding-left:22px;position:relative}
+  .why li::before{content:"";position:absolute;left:0;top:8px;width:9px;height:9px}
+  .pal-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
+  .chip{font-family:"JetBrains Mono";font-size:10.5px;padding:6px 9px;display:flex;align-items:center;gap:7px}
+  .chip i{width:13px;height:13px;display:inline-block}
+  .logo-mount{margin-top:26px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+
+  /* generic device */
+  .device{width:300px;height:610px;padding:13px;position:relative;flex:0 0 auto;margin:0 auto}
+  .scr{position:absolute;inset:13px;overflow:hidden;display:flex;flex-direction:column}
+  .sb{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:8px 4px 6px}
+  .body{flex:1;display:flex;flex-direction:column;min-height:0}
+  .ic{width:18px;height:18px;stroke-width:2;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ============ 01 NEO-BRUTALISM ============ */
+  .s-brutal{background:#FFFDF5;color:#0a0a0a}
+  .s-brutal .scheme-no{color:#0a0a0a}
+  .s-brutal h2,.s-brutal .band h2{font-family:"Archivo Black",sans-serif;color:#0a0a0a;text-transform:uppercase}
+  .s-brutal .vibe,.s-brutal .why li{color:#1a1a1a}
+  .s-brutal .why li::before{background:#0F766E;border:2px solid #000}
+  .s-brutal .chip{border:2px solid #000;background:#fff;color:#000;box-shadow:3px 3px 0 #000;border-radius:0}
+  .s-brutal .device{background:#FFD93D;border:5px solid #000;box-shadow:12px 12px 0 #000;border-radius:0}
+  .s-brutal .scr{background:#FFFDF5;border:3px solid #000}
+  .s-brutal .sb{font-family:"Space Grotesk";font-weight:700;border-bottom:3px solid #000;color:#000}
+  .s-brutal .body{padding:0}
+  .s-brutal .b-head{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:3px solid #000;background:#0F766E;color:#fff}
+  .s-brutal .b-head .t{font-family:"Archivo Black";font-size:17px;text-transform:uppercase;letter-spacing:.02em}
+  .s-brutal .b-gear{width:30px;height:30px;border:3px solid #fff;display:grid;place-items:center}
+  .s-brutal .b-zone{margin:14px 12px;border:4px solid #000;background:#fff;padding:22px 14px;text-align:center;box-shadow:6px 6px 0 #000}
+  .s-brutal .b-zone .badge{display:inline-block;background:#F97316;border:3px solid #000;font-family:"Archivo Black";font-size:11px;padding:5px 10px;transform:rotate(-3deg);margin-bottom:12px;color:#000}
+  .s-brutal .b-zone .camera{width:54px;height:54px;border:4px solid #000;background:#FFD93D;display:grid;place-items:center;margin:0 auto 12px}
+  .s-brutal .b-zone h3{font-family:"Archivo Black";font-size:20px;margin:0;text-transform:uppercase;line-height:1.05}
+  .s-brutal .b-zone p{font-family:"Space Grotesk";font-weight:600;font-size:12px;margin:6px 0 0;color:#333}
+  .s-brutal .b-actions{padding:0 12px;display:flex;flex-direction:column;gap:12px}
+  .s-brutal .btn{font-family:"Archivo Black";font-size:15px;text-transform:uppercase;border:4px solid #000;padding:14px;text-align:center;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:5px 5px 0 #000;cursor:pointer}
+  .s-brutal .btn.p{background:#F97316;color:#000}
+  .s-brutal .btn.s{background:#fff;color:#000}
+  .s-brutal .b-foot{margin-top:auto;padding:12px;border-top:3px solid #000;font-family:"Space Grotesk";font-weight:700;font-size:11px;display:flex;align-items:center;gap:8px;background:#FFD93D}
+
+  /* ============ 02 PIXEL ============ */
+  .s-pixel{background:#0b0a1f;color:#f5f3ff;position:relative}
+  .s-pixel::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 2px,transparent 2px 4px);mix-blend-mode:multiply}
+  .s-pixel .scheme-no,.s-pixel h2{color:#FFD93D}
+  .s-pixel h2{font-family:"Press Start 2P";font-size:clamp(18px,3vw,26px);line-height:1.3;text-shadow:3px 3px 0 #FF5DA2}
+  .s-pixel .vibe,.s-pixel .why li{color:#cfc9f0}
+  .s-pixel .why li::before{background:#2DD4BF}
+  .s-pixel .chip{border:2px solid #f5f3ff;background:#171535;color:#f5f3ff;border-radius:0;font-family:"VT323";font-size:14px}
+  .s-pixel .device{background:#2b2752;border:4px solid #f5f3ff;box-shadow:0 0 0 4px #0b0a1f,8px 8px 0 #FF5DA2;border-radius:0;image-rendering:pixelated}
+  .s-pixel .scr{background:#14122b;border:3px solid #4b4790}
+  .s-pixel .sb{font-family:"VT323";font-size:15px;color:#7DF9C8;border-bottom:3px solid #4b4790}
+  .s-pixel .px-head{display:flex;align-items:center;gap:10px;padding:12px;border-bottom:3px solid #4b4790}
+  .s-pixel .px-head .t{font-family:"Press Start 2P";font-size:12px;color:#FFD93D}
+  .s-pixel .body{padding:14px;gap:14px}
+  .s-pixel .px-zone{flex:1;border:3px dashed #6f6ab8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:14px}
+  .s-pixel .px-zone .lbl{font-family:"Press Start 2P";font-size:10px;color:#7DF9C8;line-height:1.6}
+  .s-pixel .px-zone .sub{font-family:"VT323";font-size:16px;color:#b7b1e6}
+  .s-pixel .px-btn{font-family:"Press Start 2P";font-size:11px;padding:13px;text-align:center;border:3px solid #0b0a1f;box-shadow:0 4px 0 #0b0a1f;color:#0b0a1f;cursor:pointer}
+  .s-pixel .px-btn.p{background:#FF8A3D}
+  .s-pixel .px-btn.s{background:#2DD4BF}
+  .s-pixel .px-foot{font-family:"VT323";font-size:15px;color:#7DF9C8;display:flex;align-items:center;gap:8px;justify-content:center}
+  .blink{animation:blink 1s steps(2,start) infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .pix-spark{animation:pixspark .9s steps(2,start) infinite}
+  @keyframes pixspark{50%{opacity:.35}}
+  .pixlogo div{width:100%;height:100%}
+
+  /* ============ 03 TERMINAL ============ */
+  .s-term{background:#050505;color:#33FF00;position:relative}
+  .s-term::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.25) 0 2px,transparent 2px 3px);opacity:.5}
+  .s-term .scheme-no{color:#1f8a14}
+  .s-term h2{font-family:"JetBrains Mono";font-weight:700;color:#33FF00;text-shadow:0 0 12px rgba(51,255,0,.4)}
+  .s-term .vibe,.s-term .why li{color:#7CFF66;font-family:"JetBrains Mono";font-size:13px}
+  .s-term .why li::before{background:#FFB000}
+  .s-term .chip{border:1px solid #1f8a14;color:#33FF00;background:#0a1a06;border-radius:0}
+  .s-term .device{background:#0a0a0a;border:1px solid #1f8a14;box-shadow:0 0 40px rgba(51,255,0,.12);border-radius:6px}
+  .s-term .scr{background:#050505;border:1px solid #143b0c;font-family:"JetBrains Mono"}
+  .s-term .sb{color:#1f8a14;font-family:"JetBrains Mono";border-bottom:1px solid #143b0c;font-size:11px}
+  .s-term .body{padding:14px;font-family:"JetBrains Mono";font-size:12px;gap:0}
+  .s-term .t-line{color:#33FF00;margin-bottom:4px}
+  .s-term .t-dim{color:#1f8a14}
+  .s-term .t-amber{color:#FFB000}
+  .s-term .t-art{white-space:pre;font-size:12px;line-height:1.15;color:#33FF00;margin:10px 0}
+  .s-term .t-box{border:1px dashed #1f8a14;padding:14px 10px;text-align:center;margin:12px 0;color:#7CFF66}
+  .s-term .t-btn{border:1px solid #33FF00;padding:11px;margin-top:10px;text-align:center;color:#33FF00;cursor:pointer;letter-spacing:.04em}
+  .s-term .t-btn.amber{border-color:#FFB000;color:#FFB000}
+  .s-term .t-foot{margin-top:auto;border-top:1px solid #143b0c;padding-top:10px;color:#1f8a14;font-size:11px;display:flex;justify-content:space-between}
+  .cur{display:inline-block;width:8px;height:14px;background:#33FF00;vertical-align:-2px;margin-left:2px}
+
+  /* ============ 04 SWISS ============ */
+  .s-swiss{background:#FAFAF7;color:#111}
+  .s-swiss .scheme-no{color:#2B43FF}
+  .s-swiss h2{font-family:"Inter";font-weight:900;letter-spacing:-.03em;color:#111}
+  .s-swiss .vibe,.s-swiss .why li{color:#333}
+  .s-swiss .why li::before{background:#2B43FF;border-radius:0}
+  .s-swiss .chip{border:1px solid #111;color:#111;background:#fff;border-radius:0}
+  .s-swiss .device{background:#fff;border:1px solid #111;border-radius:2px}
+  .s-swiss .scr{background:#fff;border:none}
+  .s-swiss .sb{font-family:"Inter";font-weight:600;color:#111;border-bottom:1px solid #111}
+  .s-swiss .body{padding:0}
+  .s-swiss .sw-grid{flex:1;display:flex;flex-direction:column}
+  .s-swiss .sw-top{padding:16px;border-bottom:1px solid #111;display:flex;justify-content:space-between;align-items:flex-start}
+  .s-swiss .sw-top .num{font-family:"JetBrains Mono";font-size:10px;color:#888}
+  .s-swiss .sw-top h3{font-family:"Inter";font-weight:900;font-size:26px;letter-spacing:-.03em;line-height:1;margin:8px 0 0}
+  .s-swiss .sw-top h3 em{font-style:normal;color:#2B43FF}
+  .s-swiss .sw-meta{font-family:"JetBrains Mono";font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-top:6px}
+  .s-swiss .sw-cap{flex:1;border-bottom:1px solid #111;display:flex;align-items:center;justify-content:center;position:relative;background-image:linear-gradient(#eee 1px,transparent 1px),linear-gradient(90deg,#eee 1px,transparent 1px);background-size:24px 24px}
+  .s-swiss .sw-cap .mark{width:78px;height:78px;border:1px solid #111;display:grid;place-items:center;background:#fff}
+  .s-swiss .sw-actions{display:grid;grid-template-columns:1fr}
+  .s-swiss .sw-btn{padding:16px;border-bottom:1px solid #111;font-family:"Inter";font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+  .s-swiss .sw-btn.p{background:#2B43FF;color:#fff}
+  .s-swiss .sw-btn .ar{font-family:"JetBrains Mono"}
+  .s-swiss .sw-foot{padding:12px 16px;font-family:"JetBrains Mono";font-size:10px;color:#666;display:flex;justify-content:space-between;text-transform:uppercase;letter-spacing:.06em}
+
+  /* ============ 05 RISO ============ */
+  .s-riso{background:#F3E9D2;color:#2a2018;position:relative}
+  .s-riso::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E")}
+  .s-riso .scheme-no{color:#C2410C}
+  .s-riso h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;color:#23201c}
+  .s-riso .vibe,.s-riso .why li{color:#4a4036}
+  .s-riso .why li::before{background:#2A7E7B;border-radius:999px}
+  .s-riso .chip{border:1.5px solid #2a2018;color:#2a2018;background:#F3E9D2;border-radius:999px}
+  .s-riso .device{background:#e8dcc0;border:2px solid #2a2018;border-radius:30px;box-shadow:0 18px 0 -4px rgba(42,32,24,.18)}
+  .s-riso .scr{background:#F3E9D2;border-radius:20px;border:1.5px solid #2a2018}
+  .s-riso .sb{font-family:"Bricolage Grotesque";font-weight:700;color:#2a2018;font-size:11px}
+  .s-riso .ri-head{display:flex;align-items:center;gap:10px;padding:8px 14px 12px}
+  .s-riso .ri-head .t{font-family:"Bricolage Grotesque";font-weight:800;font-size:18px;color:#23201c}
+  .s-riso .body{padding:0 16px 16px;gap:14px}
+  .s-riso .ri-zone{flex:1;border:2px solid #2a2018;border-radius:18px;background:#F8F1E0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:18px}
+  .s-riso .ri-zone .blob{width:60px;height:60px;border-radius:50%;background:#F4502B;mix-blend-mode:multiply;display:grid;place-items:center;color:#F3E9D2}
+  .s-riso .ri-zone h3{font-family:"Bricolage Grotesque";font-weight:800;font-size:19px;margin:0;color:#23201c}
+  .s-riso .ri-zone p{font-size:12.5px;margin:0;color:#6a5e50}
+  .s-riso .ri-btn{padding:14px;border-radius:14px;border:2px solid #2a2018;font-family:"Bricolage Grotesque";font-weight:800;font-size:15px;text-align:center;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer}
+  .s-riso .ri-btn.p{background:#2A7E7B;color:#F3E9D2}
+  .s-riso .ri-btn.s{background:#F3E9D2;color:#2a2018}
+  .s-riso .ri-foot{font-size:11px;color:#6a5e50;display:flex;align-items:center;gap:8px;justify-content:center;font-family:"Bricolage Grotesque";font-weight:600}
+
+  /* riso logo overprint */
+  .riso-logo{position:relative;width:96px;height:96px}
+  .riso-logo svg{position:absolute;inset:0;mix-blend-mode:multiply}
+  .riso-logo .teal{color:#2A7E7B}
+  .riso-logo .red{color:#F4502B;transform:translate(4px,3px) rotate(-2deg)}
+
+  footer{padding:54px 0 80px;text-align:center;color:#8b93a7;font-size:13px;border-top:1px solid rgba(255,255,255,.06)}
+  footer a{color:#9aa3ff}
+</style>
+</head>
+<body>
+
+<div class="intro wrap">
+  <div class="kicker">Calendrino · Home screen · 5 design schemes</div>
+  <h1>Same flow. Five aesthetics.<br>None of them look AI.</h1>
+  <p>The capture screen you liked — “snap anything → it becomes an event” — rebuilt in five opinionated, hand-designed styles. The calendar + flash / spark logo idea carries through, redrawn to fit each world.</p>
+  <div class="legend">
+    <a href="#brutal">01 · Neo-Brutalism</a>
+    <a href="#pixel">02 · 8-bit Pixel</a>
+    <a href="#term">03 · Terminal</a>
+    <a href="#swiss">04 · Swiss Editorial</a>
+    <a href="#riso">05 · Risograph</a>
+  </div>
+</div>
+
+<!-- ============ 01 BRUTAL ============ -->
+<section class="band s-brutal" id="brutal">
+  <div class="wrap band-grid">
+    <div class="band-info">
+      <div class="scheme-no">SCHEME 01</div>
+      <h2>Neo-Brutalism</h2>
+      <p class="vibe">Loud, confident, zero gradients. 4px black outlines, hard offset shadows, flat blocks of <b>teal + action orange</b> — the palette you liked, executed with attitude. Reads as a deliberate Gen-Z brand, not a render.</p>
+      <div class="logo-mount">
+        <!-- brutalist logo: calendar + bolt -->
+        <svg width="92" height="92" viewBox="0 0 160 160" aria-label="Calendrino brutalist mark">
+          <rect x="40" y="44" width="104" height="104" fill="#000"/>
+          <rect x="50" y="20" width="12" height="24" fill="#000"/>
+          <rect x="98" y="20" width="12" height="24" fill="#000"/>
+          <rect x="28" y="32" width="104" height="104" fill="#0F766E" stroke="#000" stroke-width="8"/>
+          <rect x="28" y="32" width="104" height="24" fill="#000"/>
+          <g transform="translate(54,52) scale(4.1)"><path d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" fill="#F97316" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></g>
+        </svg>
+        <div class="pal-chips">
+          <span class="chip"><i style="background:#0F766E"></i>#0F766E</span>
+          <span class="chip"><i style="background:#F97316"></i>#F97316</span>
+          <span class="chip"><i style="background:#FFD93D"></i>#FFD93D</span>
+          <span class="chip"><i style="background:#000"></i>#000000</span>
+        </div>
+      </div>
+      <ul class="why">
+        <li>Hard 4–5px borders + solid offset shadows = unmistakably hand-built.</li>
+        <li>Archivo Black headlines, slightly rotated badges, no blur, no gradient.</li>
+        <li>Press states “mechanically” depress (shadow collapses) — tactile.</li>
+      </ul>
+    </div>
+    <div class="band-phone">
+      <div class="device"><div class="scr">
+        <div class="sb"><span>9:41</span><span>▰▰▰ ▮</span></div>
+        <div class="body">
+          <div class="b-head">
+            <span class="t">Calendrino</span>
+            <span class="b-gear"><svg class="ic" viewBox="0 0 24 24" style="color:#fff"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1L14.5 2h-5l-.3 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.5L3 11a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1l.3 2.5h5l.3-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5a7 7 0 0 0 .1-1z"/></svg></span>
+          </div>
+          <div class="b-zone">
+            <span class="badge">DROP IT HERE</span>
+            <div class="camera"><svg class="ic" viewBox="0 0 24 24" style="color:#000;stroke-width:2.4"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.2"/></svg></div>
+            <h3>Snap it.<br>Done.</h3>
+            <p>Poster · ticket · email · PDF</p>
+          </div>
+          <div class="b-actions">
+            <div class="btn p"><svg class="ic" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.2"/></svg>Take Photo</div>
+            <div class="btn s"><svg class="ic" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>Upload File</div>
+          </div>
+          <div class="b-foot"><svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px;stroke-width:2.6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>YOUR KEY · ON DEVICE · NO ACCOUNT</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 PIXEL ============ -->
+<section class="band s-pixel" id="pixel">
+  <div class="wrap band-grid">
+    <div class="band-info">
+      <div class="scheme-no">SCHEME 02</div>
+      <h2>8-bit Pixel</h2>
+      <p class="vibe">Arcade nostalgia: a chunky pixel calendar with a blinking spark, Press Start 2P type, CRT scanlines and box-shadow pixel borders. Genuinely fun and obviously crafted frame-by-frame — animation is part of the brand.</p>
+      <div class="logo-mount">
+        <div class="pixlogo" data-cell="5" aria-label="Calendrino pixel mark"></div>
+        <div class="pal-chips">
+          <span class="chip"><i style="background:#FF8A3D"></i>FF8A3D</span>
+          <span class="chip"><i style="background:#2DD4BF"></i>2DD4BF</span>
+          <span class="chip"><i style="background:#FF5DA2"></i>FF5DA2</span>
+          <span class="chip"><i style="background:#FFD93D"></i>FFD93D</span>
+        </div>
+      </div>
+      <ul class="why">
+        <li>Limited NES-ish palette + pixelated rendering = zero “smooth AI gradient”.</li>
+        <li>Blinking spark, marquee text, instant transitions — playful motion.</li>
+        <li>Press Start 2P / VT323 fonts read instantly as deliberate retro.</li>
+      </ul>
+    </div>
+    <div class="band-phone">
+      <div class="device"><div class="scr">
+        <div class="sb"><span>P1</span><span>♥♥♥ 9:41</span></div>
+        <div class="px-head">
+          <div class="pixlogo" data-cell="3"></div>
+          <span class="t">CALENDRINO</span>
+        </div>
+        <div class="body">
+          <div class="px-zone">
+            <div class="pixlogo" data-cell="4"></div>
+            <div class="lbl">SNAP TO<br>CAPTURE</div>
+            <div class="sub">poster · ticket · pdf</div>
+          </div>
+          <div class="px-btn p blink">▶ TAKE PHOTO</div>
+          <div class="px-btn s">⇧ UPLOAD FILE</div>
+          <div class="px-foot">★ KEY STORED ON DEVICE ★</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 TERMINAL ============ -->
+<section class="band s-term" id="term">
+  <div class="wrap band-grid">
+    <div class="band-info">
+      <div class="scheme-no">SCHEME 03</div>
+      <h2>Terminal / CLI</h2>
+      <p class="vibe">Green-on-black, monospace, ASCII boxes and <span class="mono">[ BRACKET ]</span> buttons. Speaks directly to your privacy-first, bring-your-own-key, developer audience — the most anti-“consumer-AI-app” look possible.</p>
+      <div class="logo-mount">
+        <pre class="t-art" style="margin:0;background:#0a0a0a;border:1px solid #143b0c;padding:10px 12px">┌─┬─┬─┬─┬─┐
+├─┼─┼─┼─┼─┤
+│ │ │<span class="t-amber blink">ϟ</span>│ │ │
+└─┴─┴─┴─┴─┘ <span class="t-dim">calendr</span><span class="t-amber">ino</span></pre>
+        <div class="pal-chips">
+          <span class="chip"><i style="background:#33FF00"></i>#33FF00</span>
+          <span class="chip"><i style="background:#FFB000"></i>#FFB000</span>
+          <span class="chip"><i style="background:#050505"></i>#050505</span>
+        </div>
+      </div>
+      <ul class="why">
+        <li>ASCII art + blinking cursor + scanlines — a deliberate, niche aesthetic.</li>
+        <li>Reframes “BYO API key” as a feature, not friction.</li>
+        <li>Green-on-black is &gt;15:1 contrast — accessible by accident.</li>
+      </ul>
+    </div>
+    <div class="band-phone">
+      <div class="device"><div class="scr">
+        <div class="sb"><span>calendrino@local</span><span>9:41</span></div>
+        <div class="body">
+          <div class="t-dim">$ calendrino --capture</div>
+          <pre class="t-art">┌─┬─┬─┬─┬─┐
+├─┼─┼─┼─┼─┤
+│ │ │<span class="t-amber blink">ϟ</span>│ │ │
+└─┴─┴─┴─┴─┘</pre>
+          <div class="t-line">&gt; awaiting input<span class="cur blink"></span></div>
+          <div class="t-box">[ drop poster · ticket · pdf ]<br><span class="t-dim">jpg / png / heic / pdf</span></div>
+          <div class="t-btn">[ &gt; TAKE PHOTO ]</div>
+          <div class="t-btn amber">[ ↑ UPLOAD FILE ]</div>
+          <div class="t-foot"><span>key: ••••device</span><span class="t-amber">● secure</span></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 SWISS ============ -->
+<section class="band s-swiss" id="swiss">
+  <div class="wrap band-grid">
+    <div class="band-info">
+      <div class="scheme-no">SCHEME 04</div>
+      <h2>Swiss Editorial</h2>
+      <p class="vibe">Strict 12-column rigor, hairline rules, oversized Inter Black type, a single electric-blue accent and a visible baseline grid. Restrained and precise — the “designed by a person with taste” end of the spectrum.</p>
+      <div class="logo-mount">
+        <!-- swiss logo -->
+        <svg width="84" height="84" viewBox="0 0 120 120" aria-label="Calendrino swiss mark">
+          <rect x="18" y="22" width="84" height="84" fill="none" stroke="#111" stroke-width="2"/>
+          <line x1="18" y1="44" x2="102" y2="44" stroke="#111" stroke-width="2"/>
+          <line x1="46" y1="44" x2="46" y2="106" stroke="#111" stroke-width="1"/>
+          <line x1="74" y1="44" x2="74" y2="106" stroke="#111" stroke-width="1"/>
+          <line x1="18" y1="74" x2="102" y2="74" stroke="#111" stroke-width="1"/>
+          <rect x="46" y="44" width="28" height="30" fill="#2B43FF"/>
+          <path d="M64 48 L52 66 L60 66 L56 80 L70 60 L62 60 Z" fill="#fff"/>
+        </svg>
+        <div class="pal-chips">
+          <span class="chip"><i style="background:#111"></i>#111111</span>
+          <span class="chip"><i style="background:#2B43FF"></i>#2B43FF</span>
+          <span class="chip"><i style="background:#FAFAF7;border:1px solid #ccc"></i>#FAFAF7</span>
+        </div>
+      </div>
+      <ul class="why">
+        <li>Typography <em>is</em> the design — no decoration to “autogenerate”.</li>
+        <li>Mono micro-labels + index numbers feel like a real design system.</li>
+        <li>0px radius, 1px rules, one accent — disciplined, not templated.</li>
+      </ul>
+    </div>
+    <div class="band-phone">
+      <div class="device"><div class="scr">
+        <div class="sb"><span>9:41</span><span>5G ▮</span></div>
+        <div class="body"><div class="sw-grid">
+          <div class="sw-top">
+            <div>
+              <div class="num">CALENDRINO — 01/CAPTURE</div>
+              <h3>Photo<br>→ <em>Event</em></h3>
+              <div class="sw-meta">Image · Screenshot · PDF</div>
+            </div>
+            <div class="num">№001</div>
+          </div>
+          <div class="sw-cap">
+            <div class="mark"><svg width="44" height="44" viewBox="0 0 120 120"><rect x="18" y="22" width="84" height="84" fill="none" stroke="#111" stroke-width="3"/><line x1="18" y1="44" x2="102" y2="44" stroke="#111" stroke-width="3"/><rect x="46" y="44" width="28" height="30" fill="#2B43FF"/><path d="M64 48 L52 66 L60 66 L56 80 L70 60 L62 60 Z" fill="#fff"/></svg></div>
+          </div>
+          <div class="sw-actions">
+            <div class="sw-btn p">Take photo <span class="ar">→</span></div>
+            <div class="sw-btn">Upload file <span class="ar">↑</span></div>
+          </div>
+          <div class="sw-foot"><span>On-device</span><span>No account</span><span>v0.1</span></div>
+        </div></div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 05 RISO ============ -->
+<section class="band s-riso" id="riso">
+  <div class="wrap band-grid">
+    <div class="band-info">
+      <div class="scheme-no">SCHEME 05</div>
+      <h2>Risograph Print</h2>
+      <p class="vibe">Warm recycled-paper stock, two overprinted spot inks (teal + warm red) that multiply where they overlap, a slight misregistration and a grain overlay. Tactile and analog — the opposite of a clean digital render.</p>
+      <div class="logo-mount">
+        <div class="riso-logo" aria-label="Calendrino risograph mark">
+          <svg class="teal" viewBox="0 0 120 120"><rect x="22" y="30" width="76" height="76" rx="8" fill="currentColor"/><path d="M64 44 L50 70 L60 70 L55 90 L72 64 L62 64 Z" fill="#F3E9D2"/></svg>
+          <svg class="red" viewBox="0 0 120 120"><rect x="22" y="30" width="76" height="76" rx="8" fill="none" stroke="currentColor" stroke-width="6"/><rect x="38" y="22" width="8" height="16" rx="2" fill="currentColor"/><rect x="74" y="22" width="8" height="16" rx="2" fill="currentColor"/></svg>
+        </div>
+        <div class="pal-chips">
+          <span class="chip"><i style="background:#2A7E7B"></i>Teal ink</span>
+          <span class="chip"><i style="background:#F4502B"></i>Red ink</span>
+          <span class="chip"><i style="background:#F3E9D2;border:1px solid #b8a987"></i>Paper</span>
+        </div>
+      </div>
+      <ul class="why">
+        <li>Overprint + grain + misregistration = visibly “printed”, not generated.</li>
+        <li>Limited 2-ink palette is a constraint AI rarely fakes convincingly.</li>
+        <li>Friendly Bricolage Grotesque keeps the playful “-ino” warmth.</li>
+      </ul>
+    </div>
+    <div class="band-phone">
+      <div class="device"><div class="scr">
+        <div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="ri-head">
+          <div class="riso-logo" style="width:34px;height:34px">
+            <svg class="teal" viewBox="0 0 120 120"><rect x="22" y="30" width="76" height="76" rx="8" fill="currentColor"/><path d="M64 44 L50 70 L60 70 L55 90 L72 64 L62 64 Z" fill="#F3E9D2"/></svg>
+            <svg class="red" viewBox="0 0 120 120"><rect x="22" y="30" width="76" height="76" rx="8" fill="none" stroke="currentColor" stroke-width="7"/></svg>
+          </div>
+          <span class="t">Calendrino</span>
+        </div>
+        <div class="body">
+          <div class="ri-zone">
+            <div class="blob"><svg class="ic" viewBox="0 0 24 24" style="stroke-width:2.2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></div>
+            <h3>Snap or drop<br>anything</h3>
+            <p>Poster · ticket · email · PDF</p>
+          </div>
+          <div class="ri-btn p"><svg class="ic" viewBox="0 0 24 24" style="stroke-width:2.2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>Take photo</div>
+          <div class="ri-btn s"><svg class="ic" viewBox="0 0 24 24" style="stroke-width:2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>Upload file</div>
+          <div class="ri-foot"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px;stroke-width:2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Your key, on your device</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Calendrino — home screen explorations · built with the ui-ux-pro-max skill.<br>
+    See also <a href="index.html">index.html</a> (full brand system: 10 logos, palettes, type, flow, AI prompts).
+  </div>
+</footer>
+
+<script>
+  var PIX = {
+    map:[
+      "....K.....K.....",
+      ".KKKKKKKKKKKKKK.",
+      ".KTTTTTTTTTTTTK.",
+      ".KTTTTTTTTTTTTK.",
+      ".KWWWWWWWWWWWWK.",
+      ".KWWWWWWWWWWWWK.",
+      ".KWWWWWWSWWWWWK.",
+      ".KWWWWWSSSWWWWK.",
+      ".KWWWWSSSSSWWWK.",
+      ".KWWWWWSSSWWWWK.",
+      ".KWWWWWWSWWWWWK.",
+      ".KWWWWWWWWWWWWK.",
+      ".KWWWWWWWWWWWWK.",
+      ".KWWWWWWWWWWWWK.",
+      ".KKKKKKKKKKKKKK.",
+      "................"
+    ],
+    colors:{K:'#0b0a1f',T:'#2DD4BF',W:'#f5f3ff',S:'#FF8A3D'}
+  };
+  document.querySelectorAll('.pixlogo').forEach(function(el){
+    var cell = parseInt(el.getAttribute('data-cell')||'5',10);
+    el.style.display='grid';
+    el.style.gridTemplateColumns='repeat(16,'+cell+'px)';
+    el.style.gridTemplateRows='repeat(16,'+cell+'px)';
+    el.style.lineHeight='0';
+    PIX.map.forEach(function(row){
+      for(var i=0;i<row.length;i++){
+        var ch=row[i];
+        var d=document.createElement('div');
+        if(ch!=='.'){ d.style.background=PIX.colors[ch]; }
+        if(ch==='S'){ d.className='pix-spark'; }
+        el.appendChild(d);
+      }
+    });
+  });
+</script>
+</body>
+</html>
