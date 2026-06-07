@@ -73,16 +73,16 @@ tokens-and-effects block) — mirror it into the real app.
 **Files:**
 - Modify: `src/index.css`, `src/App.tsx`, `index.html`
 
-- [ ] Add riso tokens to `src/index.css` (Tailwind v4 `@theme` + `:root`): paper,
+- [x] Add riso tokens to `src/index.css` (Tailwind v4 `@theme` + `:root`): paper,
       paper-2, ink, ink-soft, teal, red, yellow, line, radius, easing; set `body`
       to paper bg + ink text (replace the dark `#0b0f1a`/`#e5e7eb` defaults).
-- [ ] Load fonts (Bricolage Grotesque / DM Sans / Space Mono) with system fallback
+- [x] Load fonts (Bricolage Grotesque / DM Sans / Space Mono) with system fallback
       and `font-display: swap`; add the page-wide paper grain overlay (fixed,
       `feTurbulence`, multiply ~.45) and register the `#rough` SVG filter once in `App.tsx`.
-- [ ] Add a global `@media (prefers-reduced-motion: reduce)` rule that disables animations.
-- [ ] Write/adjust tests: a unit test asserting the riso tokens/body theme are applied.
-- [ ] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 2.
-- [ ] agent-browser verify at `:1420`: screenshot confirms warm-paper bg + loaded fonts.
+- [x] Add a global `@media (prefers-reduced-motion: reduce)` rule that disables animations.
+- [x] Write/adjust tests: a unit test asserting the riso tokens/body theme are applied.
+- [x] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 2.
+- [x] agent-browser verify at `:1420`: screenshot confirms warm-paper bg + loaded fonts.
 
 ### Task 2: Shared Risograph primitives + inline icon set
 

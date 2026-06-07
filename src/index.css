@@ -1,7 +1,36 @@
 @import "tailwindcss";
 
+@theme {
+  --color-paper: #F3E9D2;
+  --color-paper-2: #F8F1E0;
+  --color-paper-3: #EADFC2;
+  --color-ink: #23201C;
+  --color-ink-soft: #6A5E50;
+  --color-teal: #2A7E7B;
+  --color-teal-d: #1F5F5C;
+  --color-red: #F4502B;
+  --color-red-d: #D63E1E;
+  --color-yellow: #F5C84B;
+  --color-line: #C9BC9E;
+  --font-display: "Bricolage Grotesque", sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, monospace;
+}
+
 :root {
-  color-scheme: dark;
+  --paper: #F3E9D2;
+  --paper-2: #F8F1E0;
+  --paper-3: #EADFC2;
+  --ink: #23201C;
+  --ink-soft: #6A5E50;
+  --teal: #2A7E7B;
+  --teal-d: #1F5F5C;
+  --red: #F4502B;
+  --red-d: #D63E1E;
+  --yellow: #F5C84B;
+  --line: #C9BC9E;
+  --radius: 16px;
+  --ease-riso: cubic-bezier(0.25, 0.1, 0.25, 1);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -14,8 +43,28 @@ body,
 
 body {
   margin: 0;
-  background: #0b0f1a;
-  color: #e5e7eb;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+}
+
+/* page-wide paper grain overlay — fixed multiply at ~45% */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.45;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
