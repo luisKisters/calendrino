@@ -5,7 +5,9 @@ test("settings supports OpenRouter Kimi default and editable model", async ({ pa
   await page.goto("/");
 
   await expect(page.getByText("Welcome to Calendrino")).toBeVisible();
-  await page.getByLabel("AI provider").selectOption("openrouter");
+
+  // Provider is now a segmented button group — click "Router"
+  await page.getByRole("button", { name: "OpenRouter" }).click();
   await expect(page.getByLabel("OpenRouter API key")).toBeVisible();
   await expect(page.getByLabel("Model")).toHaveValue("moonshotai/kimi-k2.6");
 

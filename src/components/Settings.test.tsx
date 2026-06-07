@@ -18,14 +18,14 @@ describe("Settings", () => {
       />,
     );
 
-    await user.selectOptions(screen.getByLabelText("AI provider"), "openrouter");
+    await user.click(screen.getByRole("button", { name: "OpenRouter" }));
     expect(screen.getByLabelText("OpenRouter API key")).toBeInTheDocument();
     expect(screen.getByLabelText("Model")).toHaveValue("moonshotai/kimi-k2.6");
 
     await user.clear(screen.getByLabelText("Model"));
     await user.type(screen.getByLabelText("Model"), "openai/gpt-4.1");
     await user.type(screen.getByLabelText("OpenRouter API key"), "sk-or-test");
-    await user.click(screen.getByRole("button", { name: "Save key" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(onSave).toHaveBeenCalledWith({
       selectedProvider: "openrouter",
@@ -52,5 +52,39 @@ describe("Settings", () => {
     expect(screen.getByLabelText("Model")).toHaveValue("custom/model");
     await user.click(screen.getByRole("button", { name: "Reset to default" }));
     expect(screen.getByLabelText("Model")).toHaveValue("moonshotai/kimi-k2.6");
+  });
+
+  it("shows saved stamp after save", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <Settings
+        initialSettings={{
+          selectedProvider: "gemini",
+          providers: { gemini: { apiKey: "test-key", model: "gemini-2.0-flash" } },
+        }}
+        hasExistingKey
+        onSave={onSave}
+      />,
+    );
+
+    expect(screen.queryByText(/Saved on this device/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(/Saved on this device/)).toBeInTheDocument();
+  });
+
+  it("renders riso styling — ink border on API key field", () => {
+    render(
+      <Settings
+        initialSettings={{ selectedProvider: "gemini", providers: {} }}
+        hasExistingKey={false}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const keyInput = screen.getByLabelText(/API key/i);
+    const wrapper = keyInput.closest("div");
+    expect(wrapper?.className).toContain("border-ink");
   });
 });
