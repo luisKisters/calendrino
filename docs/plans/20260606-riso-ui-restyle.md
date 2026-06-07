@@ -91,16 +91,16 @@ tokens-and-effects block) — mirror it into the real app.
   `Stamp.tsx`, `Halftone.tsx`, `Logo.tsx`
 - Create: `src/components/riso/RisoButton.test.tsx`, `Icon.test.tsx`
 
-- [ ] Build the inline-SVG icon set (camera, upload, calendar, clock, pin, gear,
+- [x] Build the inline-SVG icon set (camera, upload, calendar, clock, pin, gear,
       check, sparkle, lock/shield, mic, arrow, edit) to replace every emoji.
-- [ ] Build `RisoButton` (primary teal / secondary outline, 2px ink border, multiply,
+- [x] Build `RisoButton` (primary teal / secondary outline, 2px ink border, multiply,
       `:focus-visible`, ≥44px), `RisoField`+label, `Stamp` (rough rotated check via
       `#rough`), `Halftone` helper, and `Logo` (overprint mark: teal calendar + red
       bolt/outline, misregistered).
-- [ ] Write tests: `RisoButton.test.tsx` (render, onClick, disabled) and `Icon.test.tsx`
+- [x] Write tests: `RisoButton.test.tsx` (render, onClick, disabled) and `Icon.test.tsx`
       (renders `<svg>` with correct accessible name / `aria-hidden`).
-- [ ] Run `pnpm run test` and `pnpm run build` — must pass before Task 3.
-- [ ] Browser-verify: not applicable (no route yet) — covered by the unit tests above.
+- [x] Run `pnpm run test` and `pnpm run build` — must pass before Task 3.
+- [x] Browser-verify: not applicable (no route yet) — covered by the unit tests above.
 
 ### Task 3: Header + Capture (home) screen
 
