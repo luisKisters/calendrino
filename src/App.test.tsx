@@ -115,6 +115,15 @@ describe("App", () => {
     expect(await screen.findByDisplayValue("Board meeting")).toBeInTheDocument();
   });
 
+  it("renders the #rough SVG filter for riso stamp effects", async () => {
+    render(<App />);
+    // Wait for initial load
+    await screen.findByText("Welcome to Calendrino");
+    const filter = document.getElementById("rough");
+    expect(filter).not.toBeNull();
+    expect(filter?.tagName.toLowerCase()).toBe("filter");
+  });
+
   it("does not auto-open the calendar when multiple events are extracted", async () => {
     const user = userEvent.setup();
     mocks.getAiSettings.mockResolvedValue({

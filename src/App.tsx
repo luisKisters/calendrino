@@ -120,10 +120,20 @@ export default function App() {
   const showSettingsButton = screen.name === "capture" || screen.name === "review";
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col pt-[var(--safe-top)] pb-[var(--safe-bottom)]">
-      <Header onSettings={() => setScreen({ name: "settings" })} showSettings={showSettingsButton} />
-      {render()}
-    </main>
+    <>
+      <svg aria-hidden="true" style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}>
+        <defs>
+          <filter id="rough">
+            <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" result="n" />
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="5" />
+          </filter>
+        </defs>
+      </svg>
+      <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col pt-[var(--safe-top)] pb-[var(--safe-bottom)]">
+        <Header onSettings={() => setScreen({ name: "settings" })} showSettings={showSettingsButton} />
+        {render()}
+      </main>
+    </>
   );
 }
 
