@@ -1,0 +1,4 @@
+# calendrino ralphex config — managed by executr
+# Enable the finalize step so completed, reviewed work is shipped as a PR
+# (which triggers the staging environment). See .ralphex/prompts/finalize.txt.
+finalize_enabled = true

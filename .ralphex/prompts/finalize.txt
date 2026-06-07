@@ -1,0 +1,27 @@
+# Post-completion finalize step: ship the completed work as a pull request.
+#
+# available variables:
+#   {{DEFAULT_BRANCH}} - default branch name (main)
+
+# You have just finished implementing and reviewing a plan on a dedicated
+# branch. Publish it as a PR so it can be reviewed and the staging environment
+# picks it up. This is best-effort: if a step fails, report why and stop — do
+# not block or undo the work.
+
+# Steps:
+
+# 1. Identify the current branch with: git rev-parse --abbrev-ref HEAD
+#    Call it BRANCH. It must NOT be {{DEFAULT_BRANCH}}; if it is, stop and report.
+
+# 2. Ensure everything is committed: run `git status --porcelain`. If it is not
+#    empty, commit the remaining changes with a clear message.
+
+# 3. Push the branch: git push -u origin HEAD
+
+# 4. Open a pull request against {{DEFAULT_BRANCH}}:
+#    gh pr create --base {{DEFAULT_BRANCH}} --head "$BRANCH" --fill
+#    - --fill uses the commit messages for the title/body.
+#    - If gh says a PR already exists for this branch, do NOT create a duplicate;
+#      get its URL with: gh pr view --json url -q .url
+
+# 5. Report the pull request URL in your final output.
