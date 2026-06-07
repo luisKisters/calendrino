@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { zAiProviderId } from "./aiProviders";
-import { EventSchema, type CalendarEvent } from "./schema";
-import type { NowContext } from "./datetime";
+import { zAiProviderId } from "./aiProviders.js";
+import { EventSchema, type CalendarEvent } from "./schema.js";
+import type { NowContext } from "./datetime.js";
 
 export const ExtractRequestPayloadSchema = z.object({
   mediaBase64: z.string().min(1),
