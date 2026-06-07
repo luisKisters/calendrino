@@ -62,6 +62,37 @@ body::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
 }
 
+@keyframes riso-scan {
+  0%   { top: -40%; }
+  100% { top: 100%; }
+}
+
+@keyframes riso-spark {
+  50% { opacity: 0.3; }
+}
+
+@keyframes riso-shimmer {
+  to { transform: translateX(100%); }
+}
+
+.riso-scan {
+  animation: riso-scan 1.8s ease-in-out infinite;
+  background: linear-gradient(180deg, transparent, rgba(244, 80, 43, 0.28), transparent);
+}
+
+.riso-spark {
+  animation: riso-spark 1s steps(2, start) infinite;
+}
+
+.riso-skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgba(42, 126, 123, 0.18) 50%, transparent 80%);
+  transform: translateX(-100%);
+  animation: riso-shimmer 1.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;
