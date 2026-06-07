@@ -58,7 +58,7 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(await screen.findByText("Capture an event")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /take photo/i })).toBeInTheDocument();
   });
 
   it("shows an unsupported PDF error for OpenAI", async () => {
@@ -69,7 +69,7 @@ describe("App", () => {
     });
 
     const { container } = render(<App />);
-    await screen.findByText("Capture an event");
+    await screen.findByRole("button", { name: /take photo/i });
 
     const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
     await user.upload(upload, new File(["%PDF"], "event.pdf", { type: "application/pdf" }));
@@ -86,7 +86,7 @@ describe("App", () => {
     });
 
     const { container } = render(<App />);
-    await screen.findByText("Capture an event");
+    await screen.findByRole("button", { name: /take photo/i });
 
     const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
@@ -103,7 +103,7 @@ describe("App", () => {
     });
 
     const { container } = render(<App />);
-    await screen.findByText("Capture an event");
+    await screen.findByRole("button", { name: /take photo/i });
 
     const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
@@ -136,7 +136,7 @@ describe("App", () => {
     ]);
 
     const { container } = render(<App />);
-    await screen.findByText("Capture an event");
+    await screen.findByRole("button", { name: /take photo/i });
 
     const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));

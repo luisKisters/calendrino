@@ -107,15 +107,15 @@ tokens-and-effects block) — mirror it into the real app.
 **Files:**
 - Modify: `src/components/Header.tsx`, `src/components/Capture.tsx`, `e2e/app.spec.ts`
 
-- [ ] Restyle `Header` (riso `Logo` + gear `Icon`, paper bar, ink divider, Bricolage
+- [x] Restyle `Header` (riso `Logo` + gear `Icon`, paper bar, ink divider, Bricolage
       title; keep the settings action) and `Capture` to riso-flow screen 1 (ink-bordered
       zone with halftone + red camera blob, teal "Take photo", outline "Upload file",
       shield privacy footer); replace 📅/⚙️/📷/📄/🎤 with `Icon`s; preserve file-input handlers.
-- [ ] Write tests: extend `e2e/app.spec.ts` (or add `e2e/capture.spec.ts`) for the riso
+- [x] Write tests: extend `e2e/app.spec.ts` (or add `e2e/capture.spec.ts`) for the riso
       capture (paper bg, "Take photo", logo) and keep the mobile safe-area test green;
       update Header/Capture unit tests for the new markup.
-- [ ] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 4.
-- [ ] agent-browser verify: `open /`, `snapshot -i`, `screenshot`; gear opens settings.
+- [x] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 4.
+- [x] agent-browser verify: `open /`, `snapshot -i`, `screenshot`; gear opens settings.
 
 ### Task 4: Settings screen
 
