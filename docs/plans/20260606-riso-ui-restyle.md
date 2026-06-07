@@ -135,14 +135,14 @@ tokens-and-effects block) — mirror it into the real app.
 **Files:**
 - Modify: `src/components/Processing.tsx`; add e2e fixture/spec under `e2e/`
 
-- [ ] Restyle `Processing` to the riso "Reading" screen (duotone halftone thumbnail
+- [x] Restyle `Processing` to the riso "Reading" screen (duotone halftone thumbnail
       with scan sweep, ink-bar skeletons, "Pulling out your event…" + red spark, keep
       Cancel); wrap animations so `prefers-reduced-motion` disables them.
-- [ ] Write tests: assert riso skeleton + label render; a Playwright test using a
+- [x] Write tests: assert riso skeleton + label render; a Playwright test using a
       stubbed/mocked extraction reaches the processing state, plus an
       `emulateMedia({ reducedMotion: 'reduce' })` check that the animation is off.
-- [ ] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 6.
-- [ ] agent-browser verify: drive into processing (fixture image + stubbed/slow provider) and screenshot.
+- [x] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 6.
+- [x] agent-browser verify: drive into processing (fixture image + stubbed/slow provider) and screenshot.
 
 ### Task 6: Review + Event card
 
