@@ -1,0 +1,5 @@
+# Test files in api/ must not be deployed as serverless functions.
+# Vercel treats every file under api/ as a function endpoint; without this,
+# api/*.test.ts ships a live /api/*.test endpoint (and bundles Vitest with it).
+api/**/*.test.ts
+api/**/*.test.js

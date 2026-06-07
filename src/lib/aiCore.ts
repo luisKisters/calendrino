@@ -3,9 +3,9 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateObject, type JSONValue } from "ai";
-import { getProviderConfig, type AiProviderId } from "./aiProviders";
-import type { NowContext } from "./datetime";
-import { EventsSchema, type CalendarEvent } from "./schema";
+import { getProviderConfig, type AiProviderId } from "./aiProviders.js";
+import type { NowContext } from "./datetime.js";
+import { EventsSchema, type CalendarEvent } from "./schema.js";
 
 export interface DirectExtractInput {
   bytes: Uint8Array;

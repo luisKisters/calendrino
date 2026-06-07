@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { extractEventsDirect } from "../src/lib/aiCore";
-import { ExtractRequestPayloadSchema } from "../src/lib/aiContract";
+import { extractEventsDirect } from "../src/lib/aiCore.js";
+import { ExtractRequestPayloadSchema } from "../src/lib/aiContract.js";
 
 const MAX_MEDIA_BYTES = 12 * 1024 * 1024;
 const MAX_BASE64_CHARS = Math.ceil((MAX_MEDIA_BYTES * 4) / 3) + 4;

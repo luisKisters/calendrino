@@ -31,3 +31,4 @@ keystore.properties
 *.njsproj
 *.sln
 *.sw?
+.vercel
