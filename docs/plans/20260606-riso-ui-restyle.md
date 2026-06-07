@@ -122,13 +122,13 @@ tokens-and-effects block) — mirror it into the real app.
 **Files:**
 - Modify: `src/components/Settings.tsx`, `src/components/Settings.test.tsx`, `e2e/app.spec.ts`
 
-- [ ] Restyle `Settings` to riso (paper, Space-Mono labels, riso provider control,
+- [x] Restyle `Settings` to riso (paper, Space-Mono labels, riso provider control,
       ink-bordered masked key input, teal "Save", "Saved on this device" + teal
       mini-stamp, shield footer); keep provider/model/key logic and accessible names.
-- [ ] Write/update tests: `Settings.test.tsx` (provider switch → model reset) and the
+- [x] Write/update tests: `Settings.test.tsx` (provider switch → model reset) and the
       OpenRouter e2e in `app.spec.ts` for the new control; assert riso styling on a key element.
-- [ ] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 5.
-- [ ] agent-browser verify: open settings, switch provider, confirm reset + masked key + stamp; screenshot.
+- [x] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 5.
+- [x] agent-browser verify: open settings, switch provider, confirm reset + masked key + stamp; screenshot.
 
 ### Task 5: Processing (extract) screen
 
