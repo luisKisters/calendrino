@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export type AiProviderId = "gemini" | "anthropic" | "openai" | "openrouter" | "wandb" | "deepseek";
+export type AiProviderId = "gemini" | "anthropic" | "openai" | "openrouter" | "deepseek";
 
 export interface AiProviderConfig {
   id: AiProviderId;
@@ -59,18 +59,10 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProviderConfig> = {
     supportsPdfs: true,
     keyHelpUrl: "https://openrouter.ai/keys",
   },
-  // Weights & Biases Inference serves Kimi K2 far faster than OpenRouter's
-  // upstream, so it's the preferred home for Kimi. OpenAI-compatible endpoint.
-  wandb: {
-    id: "wandb",
-    label: "Weights & Biases",
-    apiKeyLabel: "W&B API key",
-    apiKeyPlaceholder: "wandb-...",
-    defaultModel: "moonshotai/Kimi-K2.6",
-    supportsImages: true,
-    supportsPdfs: true,
-    keyHelpUrl: "https://wandb.ai/authorize",
-  },
+  // Weights & Biases Inference serves Kimi K2 far faster and more reliably than
+  // OpenRouter's other upstreams. It isn't a separately selectable provider —
+  // instead OpenRouter is pinned to the W&B upstream automatically for Kimi
+  // models (see openRouterProviderRouting in aiCore).
   deepseek: {
     id: "deepseek",
     // DeepSeek's chat API (incl. deepseek-v4-flash) accepts text only — it
@@ -91,7 +83,6 @@ export const AI_PROVIDER_ORDER: AiProviderId[] = [
   "anthropic",
   "openai",
   "openrouter",
-  "wandb",
   "deepseek",
 ];
 
@@ -103,4 +94,4 @@ export function isAiProviderId(value: string): value is AiProviderId {
   return value in AI_PROVIDERS;
 }
 
-export const zAiProviderId = z.enum(["gemini", "anthropic", "openai", "openrouter", "wandb", "deepseek"]);
+export const zAiProviderId = z.enum(["gemini", "anthropic", "openai", "openrouter", "deepseek"]);

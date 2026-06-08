@@ -53,7 +53,7 @@ export async function prepareMediaForProvider(input: MediaPrepInput): Promise<Pr
       // PDF to an image here. No active provider needs that (image models read
       // PDFs directly), so reaching this branch is a misconfiguration.
       throw new MediaPrepError(
-        `${config.label} can't read PDFs directly. Use Gemini, Anthropic, OpenAI, OpenRouter, or Weights & Biases for PDFs.`,
+        `${config.label} can't read PDFs directly. Use Gemini, Anthropic, OpenAI, or OpenRouter for PDFs.`,
       );
     }
     const text = await pdfToText(bytes);

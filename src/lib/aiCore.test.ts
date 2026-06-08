@@ -80,6 +80,14 @@ describe("extractEventsDirect", () => {
     );
   });
 
+  it("leaves OpenRouter routing untouched for non-Kimi, non-OpenAI models (W&B is Kimi-only)", async () => {
+    await extractEventsDirect({ ...baseInput, provider: "openrouter", model: "anthropic/claude-haiku-4-5" });
+
+    const calls = mocks.generateObject.mock.calls;
+    const call = calls[calls.length - 1][0] as { providerOptions?: unknown };
+    expect(call.providerOptions).toBeUndefined();
+  });
+
   // DeepSeek is text-only: a raw PDF must be converted (to text) before it
   // reaches the provider, so the gate rejects an unconverted PDF outright.
   it("rejects an unconverted PDF for a provider that can't read PDFs", async () => {
@@ -101,22 +109,6 @@ describe("extractEventsDirect", () => {
         apiKey: "key",
         headers: expect.objectContaining({ "anthropic-dangerous-direct-browser-access": "true" }),
       }),
-    );
-  });
-
-  it("routes Weights & Biases through its OpenAI-compatible Kimi endpoint", async () => {
-    await extractEventsDirect({ ...baseInput, provider: "wandb" });
-
-    expect(mocks.createOpenAICompatible).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: "wandb",
-        baseURL: "https://api.inference.wandb.ai/v1",
-        apiKey: "key",
-        fetch: baseInput.fetch,
-      }),
-    );
-    expect(mocks.generateObject).toHaveBeenCalledWith(
-      expect.objectContaining({ model: { provider: "openrouter", model: "moonshotai/Kimi-K2.6" } }),
     );
   });
 

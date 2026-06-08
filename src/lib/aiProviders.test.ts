@@ -2,25 +2,18 @@ import { describe, expect, it } from "vitest";
 import { AI_PROVIDERS } from "./aiProviders";
 
 describe("AI_PROVIDERS", () => {
-  it("configures the six supported providers", () => {
+  it("configures the five supported providers (W&B is an OpenRouter upstream, not a provider)", () => {
     expect(Object.keys(AI_PROVIDERS)).toEqual([
       "gemini",
       "anthropic",
       "openai",
       "openrouter",
-      "wandb",
       "deepseek",
     ]);
   });
 
   it("uses Kimi K2.6 as the editable OpenRouter default", () => {
     expect(AI_PROVIDERS.openrouter.defaultModel).toBe("moonshotai/kimi-k2.6");
-  });
-
-  it("serves Kimi via Weights & Biases as the faster alternative to OpenRouter", () => {
-    expect(AI_PROVIDERS.wandb.defaultModel).toBe("moonshotai/Kimi-K2.6");
-    expect(AI_PROVIDERS.wandb.supportsImages).toBe(true);
-    expect(AI_PROVIDERS.wandb.supportsPdfs).toBe(true);
   });
 
   it("defaults DeepSeek to the fast v4-flash model and marks it text-only", () => {
@@ -31,11 +24,10 @@ describe("AI_PROVIDERS", () => {
   });
 
   it("tracks native PDF capability by provider", () => {
-    // Native = the provider reads PDFs directly. The rest gain PDF support via
-    // client-side conversion (PDF->PNG for image models, PDF->text for DeepSeek).
+    // Native = the provider reads PDFs directly. DeepSeek gains PDF support via
+    // client-side text extraction instead.
     expect(AI_PROVIDERS.gemini.supportsPdfs).toBe(true);
     expect(AI_PROVIDERS.openrouter.supportsPdfs).toBe(true);
-    expect(AI_PROVIDERS.wandb.supportsPdfs).toBe(true);
     expect(AI_PROVIDERS.anthropic.supportsPdfs).toBe(true);
     expect(AI_PROVIDERS.openai.supportsPdfs).toBe(true);
     // DeepSeek is text-only: PDFs reach it via client-side text extraction.

@@ -33,7 +33,7 @@ pnpm tauri icon ./app-icon.png   # rebuilds src-tauri/icons/* from the 1024×102
 1. **Capture** — take a photo or upload an image/PDF.
 2. **Extract** — the file is sent to your selected AI provider via the Vercel AI
    SDK, which returns structured events (Zod-validated). Supported providers are
-   Gemini, Anthropic, OpenAI, OpenRouter, Weights & Biases, and DeepSeek.
+   Gemini, Anthropic, OpenAI, OpenRouter, and DeepSeek.
 3. **Confirm** — review/edit the detected event(s).
 4. **Add** — opens the Google Calendar "create event" form, pre-filled.
 
@@ -89,7 +89,7 @@ provider — covering both the native (`extractEventsDirect`) and PWA
 (`src/test/fixtures/`, regenerate with `node scripts/make-fixtures.mjs`). A
 provider's live tests only run when its API key is in the environment
 (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`,
-`WANDB_API_KEY`, `DEEPSEEK_API_KEY`); otherwise they skip, and provider-side
+`DEEPSEEK_API_KEY`); otherwise they skip, and provider-side
 failures (no quota, bad key, model JSON-mode flakiness) skip rather than fail.
 In CI the keys come from GitHub Actions secrets, never the repo.
 
@@ -100,7 +100,7 @@ In CI the keys come from GitHub Actions secrets, never the repo.
 | Shell | Tauri 2 (Rust) |
 | Frontend | React 19 + TypeScript + Vite |
 | Styling | Tailwind CSS v4 |
-| AI | Vercel AI SDK (`ai`) + Gemini, Anthropic, OpenAI, OpenRouter, W&B, DeepSeek providers |
+| AI | Vercel AI SDK (`ai`) + Gemini, Anthropic, OpenAI, OpenRouter, DeepSeek providers |
 | Validation | Zod |
 | Tauri plugins | `http` (CORS-free AI calls), `opener` (open GCal), `store` (key storage), `dialog` |
 
@@ -139,17 +139,19 @@ Function, which forwards the extraction request and does not store them.
 | Provider | Default model | Images | PDFs |
 |---|---|---:|---:|
 | Gemini | `gemini-3.1-pro-preview` | Yes | Yes |
-| Anthropic | `claude-haiku-4-5` | Yes | No |
-| OpenAI | `gpt-5.4-mini` | Yes | No |
+| Anthropic | `claude-haiku-4-5` | Yes | Yes |
+| OpenAI | `gpt-5.4-mini` | Yes | Yes |
 | OpenRouter | `moonshotai/kimi-k2.6` | Yes | Yes |
-| Weights & Biases | `moonshotai/Kimi-K2.6` | Yes | Yes |
-| DeepSeek | `deepseek-v4-flash` | No | No |
+| DeepSeek | `deepseek-v4-flash` | No | Via text |
 
-Model IDs are editable in Settings. PDF uploads are enabled for Gemini,
-OpenRouter, and Weights & Biases.
+Model IDs are editable in Settings. PDF uploads work on every provider —
+natively on Gemini, Anthropic, OpenAI, and OpenRouter, and via client-side text
+extraction on DeepSeek.
 
-**Kimi K2.6:** OpenRouter's upstream is slow and intermittently fails JSON-mode
-extraction, so **Weights & Biases** ([W&B Inference](https://docs.wandb.ai/inference))
-is the recommended, faster home for Kimi. **DeepSeek** is wired up (with thinking
-disabled for fast, minimal-reasoning responses) but `deepseek-v4-flash` is
-text-only today — it rejects image/PDF parts, so it can't read captures yet.
+**Kimi K2.6:** OpenRouter's default upstreams are slow and intermittently fail
+JSON-mode extraction, so the OpenRouter provider is automatically pinned to the
+**Weights & Biases** ([W&B Inference](https://docs.wandb.ai/inference)) upstream
+for Kimi — faster and reliable, with no separate key needed (it is no longer a
+separately selectable provider). **DeepSeek** is wired up (with thinking disabled
+for fast, minimal-reasoning responses); `deepseek-v4-flash` is text-only, so PDFs
+are sent to it as client-extracted text and photos aren't supported.

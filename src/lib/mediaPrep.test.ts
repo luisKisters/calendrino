@@ -20,7 +20,7 @@ describe("prepareMediaForProvider", () => {
   });
 
   it("passes PDFs through untouched for providers that read them natively", async () => {
-    for (const provider of ["gemini", "anthropic", "openai", "openrouter", "wandb"] as const) {
+    for (const provider of ["gemini", "anthropic", "openai", "openrouter"] as const) {
       const result = await prepareMediaForProvider({ bytes: pdfBytes, mediaType: "application/pdf", provider });
       expect(result).toEqual({ bytes: pdfBytes, mediaType: "application/pdf" });
     }

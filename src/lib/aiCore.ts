@@ -88,15 +88,6 @@ function modelFor(input: DirectExtractInput, modelId: string) {
       });
       return openrouter(modelId);
     }
-    case "wandb": {
-      const wandb = createOpenAICompatible({
-        name: "wandb",
-        apiKey: input.apiKey,
-        baseURL: "https://api.inference.wandb.ai/v1",
-        fetch: fetchOverride,
-      });
-      return wandb(modelId);
-    }
     case "deepseek": {
       const deepseek = createOpenAICompatible({
         name: "deepseek",
@@ -115,15 +106,22 @@ function modelFor(input: DirectExtractInput, modelId: string) {
  * return JSON that doesn't honour the requested structure, which surfaces in-app
  * as the AI SDK's "Failed to process successful response" (a 2xx whose body fails
  * to parse). Weights & Biases Inference serves Kimi reliably and at high
- * throughput, so we pin OpenRouter to it. OpenAI-namespaced models pin to
- * OpenAI's own endpoint. Passed through `providerOptions.openrouter`, the
- * openai-compatible provider forwards unknown keys verbatim into the request
- * body, so this lands as OpenRouter's top-level `provider` routing field.
+ * throughput, so we pin the W&B upstream — but ONLY for Kimi (W&B doesn't serve
+ * other models). OpenAI-namespaced models pin to OpenAI's own endpoint; anything
+ * else is left to OpenRouter's normal routing. Passed through
+ * `providerOptions.openrouter`, the openai-compatible provider forwards unknown
+ * keys verbatim into the request body, so this lands as OpenRouter's top-level
+ * `provider` routing field.
  */
-function openRouterProviderRouting(modelId: string): Record<string, JSONValue> {
+function openRouterProviderRouting(modelId: string): Record<string, JSONValue> | undefined {
   const id = modelId.toLowerCase();
-  const upstream = id.startsWith("openai/") || id.includes("gpt-") ? "openai" : "wandb";
-  return { provider: { order: [upstream], allow_fallbacks: false } };
+  if (id.includes("kimi")) {
+    return { provider: { order: ["wandb"], allow_fallbacks: false } };
+  }
+  if (id.startsWith("openai/") || id.includes("gpt-")) {
+    return { provider: { order: ["openai"], allow_fallbacks: false } };
+  }
+  return undefined;
 }
 
 /**
@@ -148,11 +146,10 @@ function callTuning(
     case "openai":
       // GPT-5.x reasoning models reject `temperature`; minimise reasoning for speed instead.
       return { providerOptions: { openai: { reasoningEffort: "minimal" } } };
-    case "openrouter":
-      return { temperature: 0, providerOptions: { openrouter: openRouterProviderRouting(modelId) } };
-    case "wandb":
-      // Kimi K2 on W&B Inference — deterministic, no extra reasoning toggle.
-      return { temperature: 0 };
+    case "openrouter": {
+      const routing = openRouterProviderRouting(modelId);
+      return routing ? { temperature: 0, providerOptions: { openrouter: routing } } : { temperature: 0 };
+    }
     case "deepseek":
       // DeepSeek V4 enables "thinking" by default; disable it for a fast,
       // minimal-reasoning extraction. The flag is forwarded into the request
