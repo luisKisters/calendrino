@@ -106,7 +106,7 @@ test("review screen shows riso event card", async ({ page }) => {
   await expect(page.getByText("LOCATION").first()).toBeVisible();
 });
 
-test("review screen Add to Google Calendar opens calendar", async ({ page }) => {
+test("review screen Add to Google Calendar transitions to success screen", async ({ page }) => {
   await gotoReviewMulti(page);
 
   await expect(page.getByTestId("riso-event-card").first()).toBeVisible();
@@ -119,8 +119,9 @@ test("review screen Add to Google Calendar opens calendar", async ({ page }) => 
   await addBtn.click();
   await popupPromise;
 
-  // After clicking, button text changes to "Opened — open again".
-  await expect(page.getByRole("button", { name: /opened/i }).first()).toBeVisible();
+  // After clicking, success screen shows.
+  await expect(page.getByRole("heading", { name: /added to calendar/i })).toBeVisible();
+  await expect(page.getByTestId("success-ticket")).toBeVisible();
 });
 
 test("review screen New capture button returns to capture", async ({ page }) => {

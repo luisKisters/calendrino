@@ -4,6 +4,7 @@ import { Settings } from "./components/Settings";
 import { Capture } from "./components/Capture";
 import { Processing } from "./components/Processing";
 import { Review } from "./components/Review";
+import { Success } from "./components/Success";
 import { ErrorView } from "./components/ErrorView";
 import { emptyAiSettings, getAiSettings, setAiSettings, type AiSettings } from "./lib/store";
 import { nowContext } from "./lib/datetime";
@@ -19,6 +20,7 @@ type Screen =
   | { name: "capture" }
   | { name: "processing"; label: string }
   | { name: "review"; events: CalendarEvent[] }
+  | { name: "success"; event: CalendarEvent }
   | { name: "error"; message: string; detail?: string };
 
 export default function App() {
@@ -82,6 +84,7 @@ export default function App() {
 
   async function handleAdd(event: CalendarEvent) {
     await openExternal(buildGCalUrl(event));
+    setScreen({ name: "success", event });
   }
 
   function render() {
@@ -105,6 +108,8 @@ export default function App() {
         return (
           <Review events={screen.events} onAdd={handleAdd} onRestart={() => setScreen({ name: "capture" })} />
         );
+      case "success":
+        return <Success event={screen.event} onRestart={() => setScreen({ name: "capture" })} />;
       case "error":
         return (
           <ErrorView

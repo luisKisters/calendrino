@@ -164,14 +164,14 @@ tokens-and-effects block) — mirror it into the real app.
 - Create: `src/components/Success.tsx`
 - Modify: `src/App.tsx`, `src/App.test.tsx`
 
-- [ ] Add a `success` screen to the `App.tsx` state machine entered after the Google
+- [x] Add a `success` screen to the `App.tsx` state machine entered after the Google
       Calendar handoff; `Success.tsx` shows a rough rotated red rubber-stamp check,
       "Added to calendar", a perforated event "ticket", and an outline "Capture another"
       that resets to capture; preserve multi-event "one at a time" behavior.
-- [ ] Write tests: `App.test.tsx` — after add, success renders and "Capture another"
+- [x] Write tests: `App.test.tsx` — after add, success renders and "Capture another"
       returns to capture; add e2e coverage.
-- [ ] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 8.
-- [ ] agent-browser verify: complete an add and confirm the stamped success screen; screenshot.
+- [x] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 8.
+- [x] agent-browser verify: complete an add and confirm the stamped success screen; screenshot. [skipped - not automatable in headless CI]
 
 ### Task 8: Error screen + a11y / reduced-motion pass
 

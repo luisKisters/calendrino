@@ -184,6 +184,50 @@ describe("App", () => {
     expect(await screen.findByRole("button", { name: /take photo/i })).toBeInTheDocument();
   });
 
+  it("success screen shows after adding an event from review", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openrouter",
+      providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
+    });
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalled());
+    const addBtn = await screen.findByRole("button", { name: /add to google calendar/i });
+    await user.click(addBtn);
+
+    expect(await screen.findByRole("heading", { name: /added to calendar/i })).toBeInTheDocument();
+    expect(screen.getByTestId("success-ticket")).toBeInTheDocument();
+  });
+
+  it("success screen Capture another returns to capture", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openrouter",
+      providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
+    });
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalled());
+    const addBtn = await screen.findByRole("button", { name: /add to google calendar/i });
+    await user.click(addBtn);
+
+    await screen.findByRole("heading", { name: /added to calendar/i });
+    await user.click(screen.getByRole("button", { name: /capture another/i }));
+
+    expect(await screen.findByRole("button", { name: /take photo/i })).toBeInTheDocument();
+  });
+
   it("review screen shows Add to Google Calendar button", async () => {
     const user = userEvent.setup();
     mocks.getAiSettings.mockResolvedValue({
