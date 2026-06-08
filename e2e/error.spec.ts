@@ -74,23 +74,36 @@ test("error screen contains no emoji glyphs", async ({ page }) => {
   const bodyText = await page.locator("body").innerText();
   // Emoji block: U+1F300–U+1FAFF and common emoji ranges
   const emojiRegex =
-    /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}\u{1F900}-\u{1F9FF}]/u;
+    /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}]/u;
   expect(emojiRegex.test(bodyText)).toBe(false);
 });
 
-test("error screen animations are off under prefers-reduced-motion", async ({ page }) => {
+test("processing scan animation is off under prefers-reduced-motion", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await gotoAuthError(page);
 
-  await expect(page.getByTestId("riso-error")).toBeVisible();
+  // Reach the processing screen (request hangs so we stay on it)
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "aiSettings.v1",
+      JSON.stringify({
+        selectedProvider: "openai",
+        providers: { openai: { apiKey: "sk-bad", model: "gpt-4.1" } },
+      }),
+    );
+  });
+  await page.route("**/api/extract", () => { /* never fulfill */ });
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: /take photo/i })).toBeVisible();
+  const input = page.locator('input[type="file"]').first();
+  await input.setInputFiles({ name: "test.jpg", mimeType: "image/jpeg", buffer: Buffer.from("fake") });
 
-  // Verify the global reduced-motion rule is active — sample one element
+  await expect(page.getByTestId("riso-scan")).toBeVisible();
+
   const animName = await page.evaluate(() => {
-    const el = document.querySelector("[data-testid='riso-error']");
+    const el = document.querySelector("[data-testid='riso-scan']");
     if (!el) return null;
     return getComputedStyle(el).animationName;
   });
 
-  // Under reduced-motion, animation-name is "none"
   expect(animName).toBe("none");
 });

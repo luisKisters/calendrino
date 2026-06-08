@@ -43,7 +43,7 @@ export function Success({ event, onRestart }: SuccessProps) {
           className="h-3 border-b-2 border-dashed border-line"
           style={{
             backgroundImage:
-              "radial-gradient(circle, var(--color-paper, #F3E9D2) 5px, transparent 5px)",
+              "radial-gradient(circle, var(--paper, #F3E9D2) 5px, transparent 5px)",
             backgroundSize: "16px 100%",
             backgroundRepeat: "repeat-x",
             backgroundPosition: "8px center",
@@ -75,7 +75,7 @@ export function Success({ event, onRestart }: SuccessProps) {
           className="h-3 border-t-2 border-dashed border-line"
           style={{
             backgroundImage:
-              "radial-gradient(circle, var(--color-paper, #F3E9D2) 5px, transparent 5px)",
+              "radial-gradient(circle, var(--paper, #F3E9D2) 5px, transparent 5px)",
             backgroundSize: "16px 100%",
             backgroundRepeat: "repeat-x",
             backgroundPosition: "8px center",

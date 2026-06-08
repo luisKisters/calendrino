@@ -228,12 +228,43 @@ describe("App", () => {
     expect(await screen.findByRole("button", { name: /take photo/i })).toBeInTheDocument();
   });
 
-  it("review screen shows Add to Google Calendar button", async () => {
+  it("multi-event review stays on review after adding one event", async () => {
     const user = userEvent.setup();
     mocks.getAiSettings.mockResolvedValue({
       selectedProvider: "openrouter",
       providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
     });
+    mocks.extractEvents.mockResolvedValue([
+      { title: "Standup", start: "2026-06-10T09:00:00", end: null, allDay: false, location: null, description: null, timezone: null, confidence: 0.9 },
+      { title: "Lunch", start: "2026-06-10T12:00:00", end: null, allDay: false, location: null, description: null, timezone: null, confidence: 0.8 },
+    ]);
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    await screen.findByText("2 events found");
+    const addBtns = await screen.findAllByRole("button", { name: /add to google calendar/i });
+    await user.click(addBtns[0]);
+
+    // Review screen still visible — second event remains accessible.
+    expect(screen.queryByRole("heading", { name: /added to calendar/i })).not.toBeInTheDocument();
+    expect(screen.getByText("2 events found")).toBeInTheDocument();
+  });
+
+  it("review screen Add to Google Calendar button calls openExternal", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openrouter",
+      providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
+    });
+    // Use two events so auto-open does not fire (auto-open only fires for exactly one event)
+    mocks.extractEvents.mockResolvedValue([
+      { title: "Standup", start: "2026-06-10T09:00:00", end: null, allDay: false, location: null, description: null, timezone: null, confidence: 0.9 },
+      { title: "Lunch", start: "2026-06-10T12:00:00", end: null, allDay: false, location: null, description: null, timezone: null, confidence: 0.8 },
+    ]);
 
     const { container } = render(<App />);
     await screen.findByRole("button", { name: /take photo/i });
@@ -242,10 +273,12 @@ describe("App", () => {
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
 
     await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalled());
-    const addBtn = await screen.findByRole("button", { name: /add to google calendar/i });
-    expect(addBtn).toBeInTheDocument();
+    const addBtns = await screen.findAllByRole("button", { name: /add to google calendar/i });
+    expect(addBtns[0]).toBeInTheDocument();
 
-    await user.click(addBtn);
+    await user.click(addBtns[0]);
+    // openExternal called exactly once — from the button click, not auto-open
+    expect(mocks.openExternal).toHaveBeenCalledTimes(1);
     expect(mocks.openExternal).toHaveBeenCalledWith(expect.stringContaining("calendar.google.com"));
   });
 });

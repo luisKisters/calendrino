@@ -5,18 +5,19 @@
 ### Tokens
 Design tokens live in the `@theme` block at the top of `src/index.css` (Tailwind v4
 `@theme` + `:root`). The key variables: `--color-paper` (#F3E9D2), `--color-paper-2`
-(#F8F1E0), `--color-ink` (#23201C), `--color-ink-soft` (#6A5E50), `--color-teal`
-(#2A7E7B), `--color-red` (#F4502B), `--color-yellow` (#F5C84B), `--color-line`
-(#C9BC9E). The paper grain overlay (fixed `feTurbulence` SVG, `mix-blend-mode:
+(#F8F1E0), `--color-paper-3` (#EADFC2), `--color-ink` (#23201C), `--color-ink-soft`
+(#6A5E50), `--color-teal` (#2A7E7B), `--color-teal-d` (#1F5F5C, darker teal),
+`--color-red` (#F4502B), `--color-red-d` (#D63E1E, darker red), `--color-yellow`
+(#F5C84B), `--color-line` (#C9BC9E). The paper grain overlay (fixed `feTurbulence` SVG, `mix-blend-mode:
 multiply` ~0.45) and the `#rough` SVG filter are registered once in `App.tsx`.
 
 ### Shared primitives
 All reusable riso UI lives in `src/components/riso/`:
 - `Icon.tsx` — inline SVG icon set; use `<Icon name="..." />` (not emoji). Available
-  names: camera, upload, calendar, clock, pin, gear, check, sparkle, shield, mic, arrow, edit.
-- `RisoButton.tsx` — primary (teal fill) and secondary (ink outline) variants; 2px
+  names: camera, upload, calendar, calendar-check, clock, pin, gear, check, sparkle, shield, mic, arrow-left, edit, warning, title.
+- `RisoButton.tsx` — primary (teal fill), secondary (ink outline), and danger (red fill) variants; 2px
   ink border, `mix-blend-mode: multiply`, `:focus-visible` ring, ≥44px touch target.
-- `RisoField.tsx` — labeled text input with Space Mono label.
+- `RisoField.tsx` — labeled text input (`RisoField`) and read-only display variant (`RisoStaticField`), both with Space Mono label.
 - `Stamp.tsx` — rubber-stamp check mark using the `#rough` SVG filter.
 - `Halftone.tsx` — radial-gradient dot background helper.
 - `Logo.tsx` — overprint mark: teal calendar + red outline, misregistered.
