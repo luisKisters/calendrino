@@ -2,7 +2,7 @@ import type { CalendarEvent } from "./schema";
 import { aiFetch, isTauri } from "./platform";
 import type { NowContext } from "./datetime";
 import type { AiProviderId } from "./aiProviders";
-import { assertMediaSupported, extractEventsDirect } from "./aiCore";
+import { extractEventsDirect } from "./aiCore";
 import { ExtractResponsePayloadSchema, type ExtractRequestPayload } from "./aiContract";
 
 export interface ExtractInput {
@@ -11,6 +11,7 @@ export interface ExtractInput {
   provider: AiProviderId;
   apiKey: string;
   model?: string;
+  customInstructions?: string;
   now: NowContext;
 }
 
@@ -30,6 +31,7 @@ async function extractEventsViaProxy(input: ExtractInput): Promise<CalendarEvent
     provider: input.provider,
     apiKey: input.apiKey,
     model: input.model,
+    customInstructions: input.customInstructions,
     now: input.now,
   };
   const response = await fetch("/api/extract", {
@@ -48,9 +50,13 @@ async function extractEventsViaProxy(input: ExtractInput): Promise<CalendarEvent
   return ExtractResponsePayloadSchema.parse(body).events;
 }
 
-/** Send the captured file to the selected AI provider and return structured events. */
+/**
+ * Send the captured file to the selected AI provider and return structured
+ * events. Media is normalised for the provider inside the extraction call
+ * (see prepareMediaForProvider), so PDFs work on every provider — natively where
+ * supported, via text extraction for the text-only ones.
+ */
 export async function extractEvents(input: ExtractInput): Promise<CalendarEvent[]> {
-  assertMediaSupported(input);
   if (isTauri()) {
     return extractEventsDirect({ ...input, fetch: aiFetch });
   }

@@ -35,6 +35,29 @@ describe("Settings", () => {
     });
   });
 
+  it("saves typed and preset custom instructions", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+
+    render(
+      <Settings
+        initialSettings={{ selectedProvider: "gemini", providers: { gemini: { apiKey: "AIza-x" } } }}
+        hasExistingKey
+        onSave={onSave}
+      />,
+    );
+
+    await user.type(screen.getByLabelText(/Custom instructions/i), "Titles in English.");
+    await user.click(screen.getByRole("button", { name: /Assume the Europe\/Berlin timezone/i }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customInstructions: "Titles in English.\nAssume the Europe/Berlin timezone.",
+      }),
+    );
+  });
+
   it("resets OpenRouter model to Kimi K2.6", async () => {
     const user = userEvent.setup();
 

@@ -64,6 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       provider: parsed.data.provider,
       apiKey: parsed.data.apiKey,
       model: parsed.data.model,
+      customInstructions: parsed.data.customInstructions,
       now: parsed.data.now,
       fetch: globalThis.fetch.bind(globalThis),
     });

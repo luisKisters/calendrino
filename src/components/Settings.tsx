@@ -14,9 +14,19 @@ interface SettingsProps {
   onClose?: () => void;
 }
 
+// Tappable snippets that append to the custom-instructions box, so the field is
+// useful without having to type from scratch. Tailored to schedule captures.
+const INSTRUCTION_PRESETS = [
+  "Assume the Europe/Berlin timezone.",
+  "Keep event titles in German.",
+  "This is a rehearsal plan (Probenplan) — each entry is a rehearsal.",
+  "Ignore any dates in the past.",
+];
+
 export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: SettingsProps) {
   const [selectedProvider, setSelectedProvider] = useState<AiProviderId>(initialSettings.selectedProvider);
   const [providers, setProviders] = useState<AiSettings["providers"]>(initialSettings.providers);
+  const [customInstructions, setCustomInstructions] = useState(initialSettings.customInstructions ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const providerBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -55,6 +65,7 @@ export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: S
             model: model.trim() || config.defaultModel,
           },
         },
+        customInstructions: customInstructions.trim() || undefined,
       });
       setSaved(true);
     } catch {
@@ -169,6 +180,51 @@ export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: S
         >
           Reset to default
         </button>
+      </div>
+
+      {/* Custom instructions (optional) */}
+      <div className="mb-6">
+        <label
+          htmlFor="customInstructions"
+          className="mb-[5px] block font-mono text-[9.5px] uppercase tracking-[0.1em] text-ink-soft"
+        >
+          Custom instructions (optional)
+        </label>
+        <p className="mb-2 text-[12px] leading-relaxed text-ink-soft">
+          Extra guidance sent with every capture — a default timezone, a language, or how to read
+          your schedules. Tap a suggestion to add it.
+        </p>
+        <textarea
+          id="customInstructions"
+          value={customInstructions}
+          onChange={(e) => {
+            setCustomInstructions(e.target.value);
+            setSaved(false);
+          }}
+          rows={3}
+          placeholder="e.g. Assume Europe/Berlin and keep titles in German."
+          spellCheck={false}
+          className="w-full resize-y rounded-[11px] border-2 border-ink bg-paper-2 px-[11px] py-[10px] text-[13.5px] font-semibold text-ink outline-none placeholder:text-ink-soft"
+        />
+        <div className="mt-2 flex flex-wrap gap-[6px]">
+          {INSTRUCTION_PRESETS.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => {
+                setSaved(false);
+                setCustomInstructions((prev) => {
+                  if (prev.includes(preset)) return prev;
+                  const trimmed = prev.trimEnd();
+                  return trimmed ? `${trimmed}\n${preset}` : preset;
+                });
+              }}
+              className="rounded-full border-2 border-ink bg-paper px-[10px] py-[5px] font-display text-[11px] font-bold text-ink transition hover:bg-paper-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
+            >
+              + {preset}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Save button + saved indicator */}

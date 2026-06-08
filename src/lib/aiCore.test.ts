@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { extractEventsDirect } from "./aiCore";
 
 const mocks = vi.hoisted(() => ({
-  generateObject: vi.fn(async () => ({ object: { events: [] } })),
+  generateObject: vi.fn(async (_args: unknown) => ({ object: { events: [] } })),
   createGoogleGenerativeAI: vi.fn(() => vi.fn((model: string) => ({ provider: "gemini", model }))),
   createAnthropic: vi.fn(() => vi.fn((model: string) => ({ provider: "anthropic", model }))),
   createOpenAI: vi.fn(() => vi.fn((model: string) => ({ provider: "openai", model }))),
@@ -10,6 +10,15 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("ai", () => ({ generateObject: mocks.generateObject }));
+// Pass media straight through; mediaPrep's own conversion is covered in
+// mediaPrep.test.ts and exercised end-to-end by the live tests.
+vi.mock("./mediaPrep", () => ({
+  EXTRACTED_TEXT_MEDIA_TYPE: "text/plain",
+  prepareMediaForProvider: vi.fn(async (input: { bytes: Uint8Array; mediaType: string }) => ({
+    bytes: input.bytes,
+    mediaType: input.mediaType,
+  })),
+}));
 vi.mock("@ai-sdk/google", () => ({ createGoogleGenerativeAI: mocks.createGoogleGenerativeAI }));
 vi.mock("@ai-sdk/anthropic", () => ({ createAnthropic: mocks.createAnthropic }));
 vi.mock("@ai-sdk/openai", () => ({ createOpenAI: mocks.createOpenAI }));
@@ -51,12 +60,34 @@ describe("extractEventsDirect", () => {
     );
   });
 
-  it("rejects unsupported PDFs before calling a provider", async () => {
-    await expect(extractEventsDirect({ ...baseInput, provider: "anthropic", mediaType: "application/pdf" })).rejects.toThrow(
+  it("pins OpenRouter's Kimi upstream to Weights & Biases for reliable, high-TPS output", async () => {
+    await extractEventsDirect({ ...baseInput, provider: "openrouter" });
+
+    expect(mocks.generateObject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerOptions: { openrouter: { provider: { order: ["wandb"], allow_fallbacks: false } } },
+      }),
+    );
+  });
+
+  it("pins OpenAI-namespaced models routed via OpenRouter to OpenAI's own upstream", async () => {
+    await extractEventsDirect({ ...baseInput, provider: "openrouter", model: "openai/gpt-5.4-mini" });
+
+    expect(mocks.generateObject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerOptions: { openrouter: { provider: { order: ["openai"], allow_fallbacks: false } } },
+      }),
+    );
+  });
+
+  // DeepSeek is text-only: a raw PDF must be converted (to text) before it
+  // reaches the provider, so the gate rejects an unconverted PDF outright.
+  it("rejects an unconverted PDF for a provider that can't read PDFs", async () => {
+    await expect(extractEventsDirect({ ...baseInput, provider: "deepseek", mediaType: "application/pdf" })).rejects.toThrow(
       "does not support PDFs",
     );
 
-    expect(mocks.createAnthropic).not.toHaveBeenCalled();
+    expect(mocks.createOpenAICompatible).not.toHaveBeenCalled();
     expect(mocks.generateObject).not.toHaveBeenCalled();
   });
 
@@ -87,6 +118,27 @@ describe("extractEventsDirect", () => {
     expect(mocks.generateObject).toHaveBeenCalledWith(
       expect.objectContaining({ model: { provider: "openrouter", model: "moonshotai/Kimi-K2.6" } }),
     );
+  });
+
+  it("appends custom instructions to the system prompt when provided", async () => {
+    await extractEventsDirect({
+      ...baseInput,
+      provider: "gemini",
+      customInstructions: "Assume Europe/Berlin and keep titles in German.",
+    });
+
+    const calls = mocks.generateObject.mock.calls;
+    const call = calls[calls.length - 1][0] as { system: string };
+    expect(call.system).toContain("Additional instructions from the user");
+    expect(call.system).toContain("Assume Europe/Berlin and keep titles in German.");
+  });
+
+  it("omits the custom-instructions block when none is set or it's blank", async () => {
+    await extractEventsDirect({ ...baseInput, provider: "gemini", customInstructions: "   " });
+
+    const calls = mocks.generateObject.mock.calls;
+    const call = calls[calls.length - 1][0] as { system: string };
+    expect(call.system).not.toContain("Additional instructions from the user");
   });
 
   it("uses DeepSeek v4-flash with thinking disabled for minimal reasoning", async () => {

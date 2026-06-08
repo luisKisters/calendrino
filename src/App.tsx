@@ -51,14 +51,6 @@ export default function App() {
       return;
     }
     const isPdf = file.type === "application/pdf";
-    if (isPdf && !config.supportsPdfs) {
-      setScreen({
-        name: "error",
-        message: "PDFs are not supported for this provider",
-        detail: `${config.label} does not support PDFs in Calendrino yet. Use Gemini, OpenRouter, or Weights & Biases for PDFs.`,
-      });
-      return;
-    }
     setScreen({ name: "processing", label: isPdf ? "Reading your document…" : "Reading your photo…" });
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
@@ -68,6 +60,7 @@ export default function App() {
         provider,
         apiKey: providerSettings.apiKey,
         model: providerSettings.model,
+        customInstructions: settings.customInstructions,
         now: nowContext(),
       });
       // A single event is the common case: open Google Calendar straight away so

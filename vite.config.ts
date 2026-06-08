@@ -14,6 +14,13 @@ export default defineConfig(async () => ({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png"],
+      // The pdf.js bundle (used only to extract text from PDFs for text-only
+      // providers like DeepSeek) is a ~1.6 MB lazy chunk. Keep it out of the
+      // precache so it stays on-demand instead of bloating first load; it's
+      // fetched normally when that path actually runs.
+      workbox: {
+        globIgnores: ["**/pdfjs-*.js"],
+      },
       devOptions: {
         enabled: true,
       },

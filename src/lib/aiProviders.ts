@@ -24,6 +24,9 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProviderConfig> = {
     supportsPdfs: true,
     keyHelpUrl: "https://aistudio.google.com/apikey",
   },
+  // Claude Haiku 4.5 is the cheapest Claude model ($1/$5 per 1M) and, like every
+  // active Claude model, reads PDFs natively via document blocks — so it's the
+  // cheap, PDF-capable default for the Anthropic provider.
   anthropic: {
     id: "anthropic",
     label: "Anthropic",
@@ -31,9 +34,11 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProviderConfig> = {
     apiKeyPlaceholder: "sk-ant-...",
     defaultModel: "claude-haiku-4-5",
     supportsImages: true,
-    supportsPdfs: false,
+    supportsPdfs: true,
     keyHelpUrl: "https://console.anthropic.com/settings/keys",
   },
+  // The OpenAI provider sends PDFs as native `input_file` parts, which gpt-5.x
+  // reads directly — no client-side conversion needed.
   openai: {
     id: "openai",
     label: "OpenAI",
@@ -41,7 +46,7 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProviderConfig> = {
     apiKeyPlaceholder: "sk-...",
     defaultModel: "gpt-5.4-mini",
     supportsImages: true,
-    supportsPdfs: false,
+    supportsPdfs: true,
     keyHelpUrl: "https://platform.openai.com/api-keys",
   },
   openrouter: {

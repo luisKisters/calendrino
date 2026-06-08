@@ -26,6 +26,31 @@ describe("AI settings store", () => {
     });
   });
 
+  it("persists optional custom instructions", async () => {
+    await setAiSettings({
+      selectedProvider: "gemini",
+      providers: { gemini: { apiKey: "AIza-test" } },
+      customInstructions: "Assume Europe/Berlin.",
+    });
+
+    await expect(getAiSettings()).resolves.toEqual({
+      selectedProvider: "gemini",
+      providers: { gemini: { apiKey: "AIza-test" } },
+      customInstructions: "Assume Europe/Berlin.",
+    });
+  });
+
+  it("drops blank custom instructions", async () => {
+    await setAiSettings({
+      selectedProvider: "gemini",
+      providers: { gemini: { apiKey: "AIza-test" } },
+      customInstructions: "   ",
+    });
+
+    const settings = await getAiSettings();
+    expect(settings.customInstructions).toBeUndefined();
+  });
+
   it("migrates the legacy Gemini API key", async () => {
     localStorage.setItem("geminiApiKey", "AIza-legacy");
 

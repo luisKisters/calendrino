@@ -61,7 +61,7 @@ describe("App", () => {
     expect(await screen.findByRole("button", { name: /take photo/i })).toBeInTheDocument();
   });
 
-  it("shows an unsupported PDF error for OpenAI", async () => {
+  it("sends a PDF capture through extraction (every provider handles PDFs now)", async () => {
     const user = userEvent.setup();
     mocks.getAiSettings.mockResolvedValue({
       selectedProvider: "openai",
@@ -74,8 +74,33 @@ describe("App", () => {
     const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
     await user.upload(upload, new File(["%PDF"], "event.pdf", { type: "application/pdf" }));
 
-    expect(await screen.findByText("PDFs are not supported for this provider")).toBeInTheDocument();
-    expect(mocks.extractEvents).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mocks.extractEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ provider: "openai", mediaType: "application/pdf" }),
+      ),
+    );
+    expect(await screen.findByDisplayValue("Board meeting")).toBeInTheDocument();
+  });
+
+  it("forwards saved custom instructions to extraction", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openai",
+      providers: { openai: { apiKey: "sk-test", model: "gpt-4.1" } },
+      customInstructions: "Assume Europe/Berlin.",
+    });
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    await waitFor(() =>
+      expect(mocks.extractEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ customInstructions: "Assume Europe/Berlin." }),
+      ),
+    );
   });
 
   it("uploads an image and renders extracted events", async () => {

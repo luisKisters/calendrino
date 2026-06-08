@@ -14,6 +14,8 @@ export interface ProviderSettings {
 export interface AiSettings {
   selectedProvider: AiProviderId;
   providers: Partial<Record<AiProviderId, ProviderSettings>>;
+  /** Optional free-text guidance appended to the extraction prompt for every capture. */
+  customInstructions?: string;
 }
 
 let storePromise: Promise<Store> | null = null;
@@ -78,7 +80,11 @@ function normalizeSettings(value: unknown): AiSettings | null {
       };
     }
   }
-  return { selectedProvider, providers };
+  const customInstructions =
+    typeof candidate.customInstructions === "string" && candidate.customInstructions.trim()
+      ? candidate.customInstructions
+      : undefined;
+  return { selectedProvider, providers, customInstructions };
 }
 
 export function emptyAiSettings(): AiSettings {

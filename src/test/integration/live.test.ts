@@ -1,19 +1,29 @@
 // @vitest-environment node
 //
-// Live, end-to-end extraction tests against the real provider APIs, using a
-// committed sample event as both a PDF and a PNG. They cover BOTH code paths:
+// Live, end-to-end extraction tests against the real provider APIs. They cover
+// BOTH code paths:
 //   - "native"  -> extractEventsDirect()  (the path Tauri / Android uses)
 //   - "PWA"     -> api/extract handler     (the path the web/PWA build uses)
+//
+// Two fixtures are exercised:
+//   - sample-event (PNG + PDF) — a trivial single event, gated by each
+//     provider's native image/PDF capability.
+//   - probenplan.pdf — a real, dense multi-day rehearsal schedule. It runs
+//     through EVERY provider regardless of native PDF support, because PDFs are
+//     normalised per-provider before the call (image/PDF models read it
+//     directly; text-only DeepSeek gets its extracted text). This is the
+//     regression guard for the Android "Failed to process successful response"
+//     bug, which was Kimi returning unparseable structured output via
+//     OpenRouter's default upstream (now pinned to Weights & Biases).
 //
 // Each provider's tests only run when its API key is present in the environment
 // (see KEY_ENV below); otherwise they are skipped, so a plain `pnpm test` with
 // no keys stays fast and green. In CI the keys come from GitHub Actions secrets.
 //
 // Provider-side failures that are not our bug — no quota, invalid/empty key,
-// rate limits, unknown model — are turned into a runtime skip rather than a
-// failure (the user asked us to skip when quota/keys are the problem). A
-// successful response, however, MUST contain the expected event, so genuine
-// regressions still fail loudly.
+// rate limits, unknown model, flaky structured output — are turned into a
+// runtime skip rather than a failure. A successful response, however, MUST
+// contain the expected event(s), so genuine regressions still fail loudly.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -87,6 +97,19 @@ function expectKickoffEvent(events: CalendarEvent[]): void {
   expect(hit, `expected an event on 2026-03-13, got: ${JSON.stringify(events)}`).toBeTruthy();
 }
 
+// The Probenplan covers the rehearsal week Mon 8 – Fri 12 June 2026 with many
+// timed slots. Models split/merge the slots differently, so assert loosely:
+// several events, at least one landing inside that week.
+function expectProbenplanEvents(events: CalendarEvent[]): void {
+  expect(Array.isArray(events)).toBe(true);
+  expect(events.length, `expected several rehearsal events, got: ${JSON.stringify(events)}`).toBeGreaterThanOrEqual(3);
+  const inWeek = events.filter((e) => typeof e.start === "string" && /^2026-06-(08|09|10|11|12)/.test(e.start));
+  expect(
+    inWeek.length,
+    `expected events in the week of 2026-06-08..12, got starts: ${JSON.stringify(events.map((e) => e.start))}`,
+  ).toBeGreaterThanOrEqual(1);
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64");
 }
@@ -111,6 +134,69 @@ function createRes() {
   };
 }
 
+// The native (Tauri/Android) path. Aborts the underlying request once the
+// deadline passes so a hung provider surfaces as a skip, not a test-timeout.
+async function extractNative(
+  provider: AiProviderId,
+  bytes: Uint8Array,
+  mediaType: string,
+  skip: (note?: string) => void,
+): Promise<CalendarEvent[]> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CALL_DEADLINE);
+  try {
+    return await extractEventsDirect({
+      bytes,
+      mediaType,
+      provider,
+      apiKey: keyFor(provider),
+      now: NOW,
+      fetch: (input, init) => globalThis.fetch(input, { ...init, signal: controller.signal }),
+    });
+  } catch (error) {
+    if (controller.signal.aborted) tooSlowSkip(skip);
+    skipIfProviderError(skip, error);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// The PWA proxy path. The handler owns its own (global) fetch, so we can't abort
+// it; race it against the deadline instead and skip if the provider is too slow.
+async function extractViaProxy(
+  provider: AiProviderId,
+  bytes: Uint8Array,
+  mediaType: string,
+  skip: (note?: string) => void,
+): Promise<CalendarEvent[]> {
+  const res = createRes();
+  const call = handler(
+    {
+      method: "POST",
+      body: { mediaBase64: bytesToBase64(bytes), mediaType, provider, apiKey: keyFor(provider), now: NOW },
+    } as never,
+    res as never,
+  );
+  const tooSlow = Symbol("too-slow");
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<typeof tooSlow>((resolve) => {
+    timer = setTimeout(() => resolve(tooSlow), CALL_DEADLINE);
+  });
+  const outcome = await Promise.race([call.then(() => "done" as const, () => "done" as const), deadline]);
+  clearTimeout(timer);
+  if (outcome === tooSlow) tooSlowSkip(skip);
+
+  if (res.statusCode !== 200) {
+    const message =
+      res.body && typeof res.body === "object" && "error" in res.body
+        ? String((res.body as { error: unknown }).error)
+        : `HTTP ${res.statusCode}`;
+    skipIfProviderError(skip, new Error(message));
+  }
+  expect(res.statusCode).toBe(200);
+  return (res.body as { events: CalendarEvent[] }).events;
+}
+
 for (const provider of AI_PROVIDER_ORDER) {
   const config = getProviderConfig(provider);
   const hasKey = keyFor(provider).length > 0;
@@ -122,26 +208,7 @@ for (const provider of AI_PROVIDER_ORDER) {
       it.skipIf(!supported)(
         `native path extracts the event from a ${media.kind}`,
         async ({ skip }) => {
-          // Abort the underlying request once the deadline passes so a hung
-          // provider surfaces as a skip instead of a hard test-timeout failure.
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), CALL_DEADLINE);
-          try {
-            const events = await extractEventsDirect({
-              bytes: loadFixture(media.file),
-              mediaType: media.mediaType,
-              provider,
-              apiKey: keyFor(provider),
-              now: NOW,
-              fetch: (input, init) => globalThis.fetch(input, { ...init, signal: controller.signal }),
-            });
-            expectKickoffEvent(events);
-          } catch (error) {
-            if (controller.signal.aborted) tooSlowSkip(skip);
-            skipIfProviderError(skip, error);
-          } finally {
-            clearTimeout(timer);
-          }
+          expectKickoffEvent(await extractNative(provider, loadFixture(media.file), media.mediaType, skip));
         },
         TIMEOUT,
       );
@@ -149,47 +216,29 @@ for (const provider of AI_PROVIDER_ORDER) {
       it.skipIf(!supported)(
         `PWA proxy extracts the event from a ${media.kind}`,
         async ({ skip }) => {
-          const res = createRes();
-          // The handler owns its own (global) fetch, so we can't abort it; race
-          // it against the deadline instead and skip if the provider is too slow.
-          const call = handler(
-            {
-              method: "POST",
-              body: {
-                mediaBase64: bytesToBase64(loadFixture(media.file)),
-                mediaType: media.mediaType,
-                provider,
-                apiKey: keyFor(provider),
-                now: NOW,
-              },
-            } as never,
-            res as never,
-          );
-          const tooSlow = Symbol("too-slow");
-          let timer: ReturnType<typeof setTimeout> | undefined;
-          const deadline = new Promise<typeof tooSlow>((resolve) => {
-            timer = setTimeout(() => resolve(tooSlow), CALL_DEADLINE);
-          });
-          const outcome = await Promise.race([
-            call.then(() => "done" as const, () => "done" as const),
-            deadline,
-          ]);
-          clearTimeout(timer);
-          if (outcome === tooSlow) tooSlowSkip(skip);
-
-          if (res.statusCode !== 200) {
-            const message =
-              res.body && typeof res.body === "object" && "error" in res.body
-                ? String((res.body as { error: unknown }).error)
-                : `HTTP ${res.statusCode}`;
-            skipIfProviderError(skip, new Error(message));
-          }
-
-          expect(res.statusCode).toBe(200);
-          expectKickoffEvent((res.body as { events: CalendarEvent[] }).events);
+          expectKickoffEvent(await extractViaProxy(provider, loadFixture(media.file), media.mediaType, skip));
         },
         TIMEOUT,
       );
     }
+
+    // The real Probenplan PDF runs through every provider — natively where PDFs
+    // are supported, via extracted text for DeepSeek — so it's not gated on
+    // `supportsPdfs`. This is the regression guard for the in-app failure.
+    it(
+      "native path extracts the rehearsal week from the Probenplan PDF",
+      async ({ skip }) => {
+        expectProbenplanEvents(await extractNative(provider, loadFixture("probenplan.pdf"), "application/pdf", skip));
+      },
+      TIMEOUT,
+    );
+
+    it(
+      "PWA proxy extracts the rehearsal week from the Probenplan PDF",
+      async ({ skip }) => {
+        expectProbenplanEvents(await extractViaProxy(provider, loadFixture("probenplan.pdf"), "application/pdf", skip));
+      },
+      TIMEOUT,
+    );
   });
 }

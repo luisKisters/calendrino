@@ -30,12 +30,15 @@ describe("AI_PROVIDERS", () => {
     expect(AI_PROVIDERS.deepseek.supportsPdfs).toBe(false);
   });
 
-  it("tracks default PDF capability by provider", () => {
+  it("tracks native PDF capability by provider", () => {
+    // Native = the provider reads PDFs directly. The rest gain PDF support via
+    // client-side conversion (PDF->PNG for image models, PDF->text for DeepSeek).
     expect(AI_PROVIDERS.gemini.supportsPdfs).toBe(true);
     expect(AI_PROVIDERS.openrouter.supportsPdfs).toBe(true);
     expect(AI_PROVIDERS.wandb.supportsPdfs).toBe(true);
-    expect(AI_PROVIDERS.anthropic.supportsPdfs).toBe(false);
-    expect(AI_PROVIDERS.openai.supportsPdfs).toBe(false);
+    expect(AI_PROVIDERS.anthropic.supportsPdfs).toBe(true);
+    expect(AI_PROVIDERS.openai.supportsPdfs).toBe(true);
+    // DeepSeek is text-only: PDFs reach it via client-side text extraction.
     expect(AI_PROVIDERS.deepseek.supportsPdfs).toBe(false);
   });
 });
