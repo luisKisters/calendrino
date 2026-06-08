@@ -222,8 +222,8 @@ tokens-and-effects block) — mirror it into the real app.
 **Files:**
 - Modify: `README.md`, `CLAUDE.md`
 
-- [ ] Update `README.md` for the new Risograph look (user-facing visuals) and how to
+- [x] Update `README.md` for the new Risograph look (user-facing visuals) and how to
       regenerate icons (`pnpm tauri icon ./app-icon.png`).
-- [ ] Update `CLAUDE.md` for the internal patterns introduced (riso tokens in
+- [x] Update `CLAUDE.md` for the internal patterns introduced (riso tokens in
       `src/index.css`, shared primitives in `src/components/riso/`, the agent-browser
       verification step, and the no-emoji-icons rule).

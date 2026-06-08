@@ -9,6 +9,25 @@ desktop), **React**, and an installable web/PWA build.
 > server, no calendar OAuth. See [`docs/plans/plan1.md`](docs/plans/plan1.md) for
 > the V0 spec and [`docs/plans/ideas.md`](docs/plans/ideas.md) for the roadmap.
 
+## Visual design
+
+Calendrino uses a **Risograph** aesthetic: warm paper stock (`#F3E9D2`), two
+overprinted spot inks (teal `#2A7E7B` + red `#F4502B`, `mix-blend-mode: multiply`),
+paper grain, halftone shading, deliberate misregistration, and rubber-stamp
+confirmations. Type is Bricolage Grotesque (display) + DM Sans (body) + Space Mono
+(labels). All icons are inline SVG — no emoji.
+
+The reference design is at [`docs/brand/riso-flow.html`](docs/brand/riso-flow.html).
+Shared UI primitives live in `src/components/riso/` (Icon, RisoButton, RisoField,
+Stamp, Halftone, Logo). Design tokens are defined in the `@theme` block at the top
+of `src/index.css`.
+
+To regenerate app icons from the riso source mark:
+
+```bash
+pnpm tauri icon ./app-icon.png   # rebuilds src-tauri/icons/* from the 1024×1024 source
+```
+
 ## How it works
 
 1. **Capture** — take a photo or upload an image/PDF.
@@ -98,7 +117,9 @@ src/
     datetime.ts   local-time parsing/formatting helpers
     store.ts      API key persistence (Tauri store / localStorage)
     platform.ts   isTauri(), aiFetch, openExternal()
-  components/      Settings · Capture · Processing · Review · EventCard · ErrorView · Header
+  components/
+    riso/          Shared riso primitives: Icon · RisoButton · RisoField · Stamp · Halftone · Logo
+                   Settings · Capture · Processing · Review · EventCard · ErrorView · Header · Success
   App.tsx         screen state machine
 api/              Vercel Function for browser/PWA AI extraction
 src-tauri/        Rust shell, plugin registration, capabilities, config
