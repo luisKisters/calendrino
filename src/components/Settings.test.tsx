@@ -18,7 +18,7 @@ describe("Settings", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "OpenRouter" }));
+    await user.click(screen.getByRole("radio", { name: "OpenRouter" }));
     expect(screen.getByLabelText("OpenRouter API key")).toBeInTheDocument();
     expect(screen.getByLabelText("Model")).toHaveValue("moonshotai/kimi-k2.6");
 

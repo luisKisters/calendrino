@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 type IconName =
   | "camera"
   | "upload"
@@ -23,7 +25,7 @@ interface IconProps {
   "aria-hidden"?: boolean | "true" | "false";
 }
 
-const paths: Record<IconName, React.ReactNode> = {
+const paths: Record<IconName, ReactNode> = {
   camera: (
     <>
       <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
@@ -114,7 +116,10 @@ export function Icon({
   "aria-label": ariaLabel,
   "aria-hidden": ariaHidden,
 }: IconProps) {
-  const isDecorative = ariaHidden === true || ariaHidden === "true" || (!ariaLabel);
+  const isDecorative =
+    ariaHidden === true ||
+    ariaHidden === "true" ||
+    (ariaHidden !== false && ariaHidden !== "false" && !ariaLabel);
   return (
     <svg
       viewBox="0 0 24 24"

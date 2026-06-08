@@ -73,11 +73,11 @@ async function gotoReviewSingle(page: import("@playwright/test").Page) {
     });
   });
 
-  await page.goto("/");
-  // Suppress the auto-popup so Playwright doesn't block on it.
-  await page.evaluate(() => {
+  // Suppress the auto-popup before any page script runs to avoid a race.
+  await page.addInitScript(() => {
     window.open = () => null;
   });
+  await page.goto("/");
 
   await expect(page.getByRole("button", { name: /take photo/i })).toBeVisible();
 
@@ -106,22 +106,35 @@ test("review screen shows riso event card", async ({ page }) => {
   await expect(page.getByText("LOCATION").first()).toBeVisible();
 });
 
-test("review screen Add to Google Calendar transitions to success screen", async ({ page }) => {
+test("review screen Add to Google Calendar transitions to success screen for single event", async ({ page }) => {
+  // Single-event flow: auto-popup is suppressed, then Add button navigates to success.
+  await gotoReviewSingle(page);
+
+  await expect(page.getByTestId("riso-event-card")).toBeVisible();
+
+  const addBtn = page.getByRole("button", { name: /add to google calendar/i });
+  await expect(addBtn).toBeVisible();
+  await addBtn.click();
+
+  // After adding the only event, success screen shows.
+  await expect(page.getByRole("heading", { name: /added to calendar/i })).toBeVisible();
+  await expect(page.getByTestId("success-ticket")).toBeVisible();
+});
+
+test("multi-event review stays on review after adding one event", async ({ page }) => {
   await gotoReviewMulti(page);
 
   await expect(page.getByTestId("riso-event-card").first()).toBeVisible();
 
   const addBtn = page.getByRole("button", { name: /add to google calendar/i }).first();
-  await expect(addBtn).toBeVisible();
-
-  // Handle the popup that window.open triggers.
   const popupPromise = page.waitForEvent("popup").catch(() => null);
   await addBtn.click();
   await popupPromise;
 
-  // After clicking, success screen shows.
-  await expect(page.getByRole("heading", { name: /added to calendar/i })).toBeVisible();
-  await expect(page.getByTestId("success-ticket")).toBeVisible();
+  // Review screen must still be visible — second event is still accessible.
+  await expect(page.getByTestId("riso-event-card").nth(1)).toBeVisible();
+  // Success screen must NOT appear.
+  await expect(page.getByRole("heading", { name: /added to calendar/i })).not.toBeVisible();
 });
 
 test("review screen New capture button returns to capture", async ({ page }) => {

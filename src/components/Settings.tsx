@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { openExternal } from "../lib/platform";
 import { AI_PROVIDER_ORDER, getProviderConfig, type AiProviderId } from "../lib/aiProviders";
 import type { AiSettings } from "../lib/store";
@@ -19,6 +19,7 @@ export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: S
   const [providers, setProviders] = useState<AiSettings["providers"]>(initialSettings.providers);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const providerBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const config = getProviderConfig(selectedProvider);
   const selectedSettings = providers[selectedProvider];
   const key = selectedSettings?.apiKey ?? "";
@@ -56,6 +57,9 @@ export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: S
         },
       });
       setSaved(true);
+    } catch {
+      // onSave failure (e.g. store write error) — leave saved=false so the stamp
+      // does not appear and the user can retry
     } finally {
       setSaving(false);
     }
@@ -82,12 +86,12 @@ export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: S
       </p>
 
       {/* Provider segmented control */}
-      <label className="mb-[6px] font-mono text-[9.5px] uppercase tracking-[0.1em] text-ink-soft">
+      <span className="mb-[6px] font-mono text-[9.5px] uppercase tracking-[0.1em] text-ink-soft">
         AI provider
-      </label>
+      </span>
       <div
         className="mb-5 flex overflow-hidden rounded-[12px] border-2 border-ink"
-        role="group"
+        role="radiogroup"
         aria-label="AI provider"
       >
         {AI_PROVIDER_ORDER.map((provider, i) => {
@@ -96,8 +100,22 @@ export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: S
             <button
               key={provider}
               type="button"
+              role="radio"
               onClick={() => handleProviderChange(provider)}
-              aria-pressed={isSelected}
+              aria-checked={isSelected}
+              tabIndex={isSelected ? 0 : -1}
+              ref={(el) => { providerBtnRefs.current[i] = el; }}
+              onKeyDown={(e) => {
+                const len = AI_PROVIDER_ORDER.length;
+                let next = -1;
+                if (e.key === "ArrowRight" || e.key === "ArrowDown") next = (i + 1) % len;
+                else if (e.key === "ArrowLeft" || e.key === "ArrowUp") next = (i - 1 + len) % len;
+                if (next >= 0) {
+                  e.preventDefault();
+                  handleProviderChange(AI_PROVIDER_ORDER[next]);
+                  providerBtnRefs.current[next]?.focus();
+                }
+              }}
               className={[
                 "flex-1 py-[9px] px-1 font-display text-[11px] font-bold leading-none text-center transition",
                 i < AI_PROVIDER_ORDER.length - 1 ? "border-r-[1.5px] border-ink" : "",
@@ -128,7 +146,7 @@ export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: S
         <button
           type="button"
           onClick={() => openExternal(config.keyHelpUrl)}
-          className="mt-2 text-[12px] font-semibold text-teal hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
+          className="mt-2 min-h-[44px] text-[12px] font-semibold text-teal hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
         >
           Get a {config.label} API key →
         </button>
@@ -147,7 +165,7 @@ export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: S
         <button
           type="button"
           onClick={() => updateSelected({ model: config.defaultModel })}
-          className="mt-2 text-[12px] font-semibold text-ink-soft hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
+          className="mt-2 min-h-[44px] text-[12px] font-semibold text-ink-soft hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
         >
           Reset to default
         </button>

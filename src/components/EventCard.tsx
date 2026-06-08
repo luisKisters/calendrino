@@ -106,6 +106,7 @@ export function EventCard({ event, onChange, onAdd, added }: EventCardProps) {
                   type="date"
                   value={toDateInput(event.start)}
                   onChange={(e) => set("start", e.target.value)}
+                  aria-label="Start date"
                   className={editInputCls}
                 />
               ) : (
@@ -113,6 +114,7 @@ export function EventCard({ event, onChange, onAdd, added }: EventCardProps) {
                   type="datetime-local"
                   value={toDateTimeLocalInput(event.start)}
                   onChange={(e) => set("start", e.target.value)}
+                  aria-label="Start date and time"
                   className={editInputCls}
                 />
               )}
@@ -123,6 +125,7 @@ export function EventCard({ event, onChange, onAdd, added }: EventCardProps) {
                   type="date"
                   value={event.end ? toDateInput(event.end) : ""}
                   onChange={(e) => set("end", e.target.value || null)}
+                  aria-label="End date"
                   className={editInputCls}
                 />
               ) : (
@@ -130,6 +133,7 @@ export function EventCard({ event, onChange, onAdd, added }: EventCardProps) {
                   type="datetime-local"
                   value={event.end ? toDateTimeLocalInput(event.end) : ""}
                   onChange={(e) => set("end", e.target.value || null)}
+                  aria-label="End date and time"
                   className={editInputCls}
                 />
               )}
@@ -139,6 +143,7 @@ export function EventCard({ event, onChange, onAdd, added }: EventCardProps) {
             <input
               value={event.location ?? ""}
               onChange={(e) => set("location", e.target.value || null)}
+              aria-label="Location"
               className={editInputCls}
               placeholder="Optional"
             />
@@ -147,6 +152,7 @@ export function EventCard({ event, onChange, onAdd, added }: EventCardProps) {
             <textarea
               value={event.description ?? ""}
               onChange={(e) => set("description", e.target.value || null)}
+              aria-label="Notes"
               className={`${editInputCls} min-h-16 resize-y`}
               placeholder="Optional"
             />

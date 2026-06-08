@@ -9,14 +9,14 @@ export function Stamp({ size = 108, className = "" }: StampProps) {
       viewBox="0 0 120 120"
       width={size}
       height={size}
-      className={`[filter:url(#rough)] [mix-blend-mode:multiply] [-rotate-8] ${className}`}
+      className={`[filter:url(#rough)] [mix-blend-mode:multiply] [rotate:-8deg] ${className}`}
       aria-hidden="true"
     >
-      <circle cx="60" cy="60" r="50" fill="none" stroke="#F4502B" strokeWidth="6" />
+      <circle cx="60" cy="60" r="50" fill="none" stroke="var(--red)" strokeWidth="6" />
       <path
         d="M37 62 L53 79 L85 41"
         fill="none"
-        stroke="#F4502B"
+        stroke="var(--red)"
         strokeWidth="9"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -32,11 +32,11 @@ export function MiniStamp({ className = "" }: { className?: string }) {
       width="22"
       height="22"
       fill="none"
-      stroke="#2A7E7B"
+      stroke="var(--teal)"
       strokeWidth="2.6"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={`[filter:url(#rough)] [mix-blend-mode:multiply] [-rotate-6] ${className}`}
+      className={`[filter:url(#rough)] [mix-blend-mode:multiply] [rotate:-6deg] ${className}`}
       aria-hidden="true"
     >
       <circle cx="12" cy="12" r="9" />

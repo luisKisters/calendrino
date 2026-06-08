@@ -38,7 +38,8 @@ export default function App() {
   async function handleSaveSettings(next: AiSettings) {
     await setAiSettings(next);
     setSettings(next);
-    setScreen({ name: "capture" });
+    // Delay navigation so the "Saved" stamp in Settings has time to render.
+    setTimeout(() => setScreen({ name: "capture" }), 900);
   }
 
   async function handleFile(file: File) {
@@ -74,7 +75,8 @@ export default function App() {
       // may swallow it after the await, so we still land on the review screen,
       // where the same event is one tap away as a fallback.
       if (events.length === 1) {
-        await openExternal(buildGCalUrl(events[0]));
+        // Best-effort: popup blockers or OS URL-handler failures must not lose the events.
+        try { await openExternal(buildGCalUrl(events[0])); } catch { /* fall through */ }
       }
       setScreen({ name: "review", events });
     } catch (err) {
@@ -83,23 +85,33 @@ export default function App() {
   }
 
   async function handleAdd(event: CalendarEvent) {
-    await openExternal(buildGCalUrl(event));
-    setScreen({ name: "success", event });
+    try {
+      await openExternal(buildGCalUrl(event));
+      // Only transition to success for single-event reviews; multi-event stays on
+      // the review screen so remaining events can be added one at a time.
+      if (screen.name === "review" && screen.events.length === 1) {
+        setScreen({ name: "success", event });
+      }
+    } catch (err) {
+      setScreen(classifyError(err, getProviderConfig(settings.selectedProvider).label));
+    }
   }
 
   function render() {
     switch (screen.name) {
       case "loading":
-        return <div className="flex flex-1 items-center justify-center text-gray-500">Loading…</div>;
-      case "settings":
+        return <div className="flex flex-1 items-center justify-center text-ink-soft">Loading…</div>;
+      case "settings": {
+        const hasKey = Object.values(settings.providers).some((provider) => !!provider?.apiKey);
         return (
           <Settings
             initialSettings={settings}
-            hasExistingKey={Object.values(settings.providers).some((provider) => !!provider?.apiKey)}
+            hasExistingKey={hasKey}
             onSave={handleSaveSettings}
-            onClose={Object.values(settings.providers).some((provider) => !!provider?.apiKey) ? () => setScreen({ name: "capture" }) : undefined}
+            onClose={hasKey ? () => setScreen({ name: "capture" }) : undefined}
           />
         );
+      }
       case "capture":
         return <Capture onFile={handleFile} />;
       case "processing":

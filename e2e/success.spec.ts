@@ -22,7 +22,6 @@ async function gotoSuccess(page: import("@playwright/test").Page) {
     );
   });
 
-  // Use 2 events to avoid auto-open; user manually clicks add for one.
   await page.route("**/api/extract", async (route) => {
     await route.fulfill({
       status: 200,
@@ -31,11 +30,11 @@ async function gotoSuccess(page: import("@playwright/test").Page) {
     });
   });
 
-  // Suppress the auto-popup for the single-event auto-open.
-  await page.goto("/");
-  await page.evaluate(() => {
+  // Suppress the auto-popup before any page script runs to avoid a race.
+  await page.addInitScript(() => {
     window.open = () => null;
   });
+  await page.goto("/");
 
   await expect(page.getByRole("button", { name: /take photo/i })).toBeVisible();
 
