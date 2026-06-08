@@ -21,8 +21,8 @@ export default defineConfig(async () => ({
         name: "Calendrino",
         short_name: "Calendrino",
         description: "Turn a photo, screenshot, or PDF into a Google Calendar event.",
-        theme_color: "#0b0f1a",
-        background_color: "#0b0f1a",
+        theme_color: "#2A7E7B",
+        background_color: "#F3E9D2",
         display: "standalone",
         start_url: "/",
         icons: [

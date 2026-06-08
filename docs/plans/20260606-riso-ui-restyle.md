@@ -195,13 +195,13 @@ tokens-and-effects block) — mirror it into the real app.
   `public/pwa-maskable-512x512.png`, `src-tauri/icons/*`
 - Create: `app-icon.png` (1024×1024 source)
 
-- [ ] Render the riso mark to a 1024×1024 `app-icon.png`; run `pnpm tauri icon
+- [x] Render the riso mark to a 1024×1024 `app-icon.png`; run `pnpm tauri icon
       ./app-icon.png` to regenerate `src-tauri/icons/*`; replace the `public/` favicons
       and PWA icons with riso versions; update the PWA manifest `theme_color` /
       `background_color` in `vite.config.ts` to the riso palette.
-- [ ] Write tests: an e2e smoke check that the favicon `<link>` and manifest are served.
-- [ ] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 10.
-- [ ] agent-browser verify: `open /`, confirm the new favicon/theme; screenshot.
+- [x] Write tests: an e2e smoke check that the favicon `<link>` and manifest are served.
+- [x] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 10.
+- [x] agent-browser verify: `open /`, confirm the new favicon/theme; screenshot.
 
 ### Task 10: Verify acceptance criteria
 
