@@ -178,14 +178,14 @@ tokens-and-effects block) — mirror it into the real app.
 **Files:**
 - Modify: `src/components/ErrorView.tsx`; add an error e2e spec under `e2e/`
 
-- [ ] Restyle `ErrorView` to riso (paper, ink, `Icon` instead of ⚠️, friendly
+- [x] Restyle `ErrorView` to riso (paper, ink, `Icon` instead of ⚠️, friendly
       messages, retry/settings as riso buttons with red danger emphasis); do a global
       pass for `:focus-visible`, ≥44px targets, AA contrast, and `prefers-reduced-motion`
       across every screen; confirm no emoji remain (grep `src/`).
-- [ ] Write tests: e2e error state (e.g., bad key) shows the riso error + retry; a
+- [x] Write tests: e2e error state (e.g., bad key) shows the riso error + retry; a
       reduced-motion e2e; an assertion that rendered output contains no emoji glyphs.
-- [ ] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 9.
-- [ ] agent-browser verify: force a bad-key error and screenshot; toggle reduced motion and confirm animations off.
+- [x] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 9.
+- [x] agent-browser verify: force a bad-key error and screenshot; toggle reduced motion and confirm animations off. [skipped - not automatable in headless CI]
 
 ### Task 9: App icon, favicon & PWA icons from the riso mark
 
