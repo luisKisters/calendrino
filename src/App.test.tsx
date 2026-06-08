@@ -144,4 +144,64 @@ describe("App", () => {
     expect(await screen.findByText("2 events found")).toBeInTheDocument();
     expect(mocks.openExternal).not.toHaveBeenCalled();
   });
+
+  it("review screen shows riso event card with testid", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openrouter",
+      providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
+    });
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalled());
+    const card = await screen.findByTestId("riso-event-card");
+    expect(card).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /review event/i })).toBeInTheDocument();
+  });
+
+  it("review screen New capture button returns to capture", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openrouter",
+      providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
+    });
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalled());
+    await screen.findByTestId("riso-event-card");
+
+    await user.click(screen.getByRole("button", { name: /new capture/i }));
+    expect(await screen.findByRole("button", { name: /take photo/i })).toBeInTheDocument();
+  });
+
+  it("review screen shows Add to Google Calendar button", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openrouter",
+      providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
+    });
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalled());
+    const addBtn = await screen.findByRole("button", { name: /add to google calendar/i });
+    expect(addBtn).toBeInTheDocument();
+
+    await user.click(addBtn);
+    expect(mocks.openExternal).toHaveBeenCalledWith(expect.stringContaining("calendar.google.com"));
+  });
 });
