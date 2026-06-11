@@ -24,9 +24,6 @@ test("capture screen shows riso logo and heading", async ({ page }) => {
 
   // Secondary action button
   await expect(page.getByRole("button", { name: /upload file/i })).toBeVisible();
-
-  // Privacy footer
-  await expect(page.getByText(/your key/i)).toBeVisible();
 });
 
 test("capture screen gear button opens settings", async ({ page }) => {

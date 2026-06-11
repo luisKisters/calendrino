@@ -40,6 +40,14 @@ describe("Icon", () => {
     expect(svg?.getAttribute("class")).toContain("text-red");
   });
 
+  it("gear renders an svg with a circle and path child elements", () => {
+    const { container } = render(<Icon name="gear" />);
+    const svg = container.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg?.querySelector("circle")).not.toBeNull();
+    expect(svg?.querySelector("path")).not.toBeNull();
+  });
+
   it("renders all icon variants without throwing", () => {
     const icons = [
       "camera", "upload", "calendar", "calendar-check", "clock",

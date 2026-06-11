@@ -89,12 +89,9 @@ export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: S
         </button>
       )}
 
-      <h2 className="mb-1 font-display text-[22px] font-extrabold leading-tight text-ink">
+      <h2 className="mb-6 font-display text-[22px] font-extrabold leading-tight text-ink">
         {hasExistingKey ? "Settings" : "Welcome to Calendrino"}
       </h2>
-      <p className="mb-6 text-[13px] leading-relaxed text-ink-soft">
-        Your key is stored only on this device and sent directly to the provider — never to us.
-      </p>
 
       {/* Provider segmented control */}
       <span className="mb-[6px] font-mono text-[9.5px] uppercase tracking-[0.1em] text-ink-soft">
