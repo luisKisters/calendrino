@@ -60,7 +60,7 @@ export default function App() {
         provider,
         apiKey: providerSettings.apiKey,
         model: providerSettings.model,
-        customInstructions: settings.customInstructions,
+        instructions: settings.customInstructions,
         now: nowContext(),
       });
       // A single event is the common case: open Google Calendar straight away so

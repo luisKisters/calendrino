@@ -11,7 +11,7 @@ export interface ExtractInput {
   provider: AiProviderId;
   apiKey: string;
   model?: string;
-  customInstructions?: string;
+  instructions?: string;
   now: NowContext;
 }
 
@@ -31,7 +31,7 @@ async function extractEventsViaProxy(input: ExtractInput): Promise<CalendarEvent
     provider: input.provider,
     apiKey: input.apiKey,
     model: input.model,
-    customInstructions: input.customInstructions,
+    instructions: input.instructions,
     now: input.now,
   };
   const response = await fetch("/api/extract", {

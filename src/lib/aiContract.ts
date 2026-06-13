@@ -9,7 +9,7 @@ export const ExtractRequestPayloadSchema = z.object({
   provider: zAiProviderId,
   apiKey: z.string().min(1),
   model: z.string().optional(),
-  customInstructions: z.string().optional(),
+  instructions: z.string().optional(),
   now: z.object({
     isoDate: z.string(),
     weekday: z.string(),
@@ -27,7 +27,7 @@ export interface ExtractRequestPayload {
   provider: z.infer<typeof zAiProviderId>;
   apiKey: string;
   model?: string;
-  customInstructions?: string;
+  instructions?: string;
   now: NowContext;
 }
 

@@ -42,6 +42,7 @@ const validBody = {
   mediaType: "image/png",
   provider: "openai",
   apiKey: "key",
+  instructions: "Assume Europe/Berlin.",
   now: { isoDate: "2026-06-06", weekday: "Saturday", tz: "Europe/Berlin" },
 };
 
@@ -81,6 +82,7 @@ describe("api/extract", () => {
         mediaType: "image/png",
         provider: "openai",
         apiKey: "key",
+        instructions: "Assume Europe/Berlin.",
       }),
     );
     expect(res.statusCode).toBe(200);

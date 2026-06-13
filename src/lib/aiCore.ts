@@ -15,12 +15,12 @@ export interface DirectExtractInput {
   apiKey: string;
   model?: string;
   /** Optional free-text user guidance appended to the extraction prompt. */
-  customInstructions?: string;
+  instructions?: string;
   now: NowContext;
   fetch?: typeof fetch;
 }
 
-function systemPrompt(now: NowContext, customInstructions?: string): string {
+export function systemPrompt(now: NowContext, instructions?: string): string {
   const lines = [
     "You extract calendar events from the provided image, PDF, text, or audio.",
     `Today is ${now.isoDate} (${now.weekday}); the user's timezone is ${now.tz}.`,
@@ -40,14 +40,14 @@ function systemPrompt(now: NowContext, customInstructions?: string): string {
     "- confidence is your 0..1 certainty that this is a real, schedulable event.",
     "- If there are no events at all, return an empty events array.",
   ];
-  const extra = customInstructions?.trim();
+  const extra = instructions?.trim();
   if (extra) {
-    // User-supplied guidance. Keep it clearly fenced and subordinate to the rules
-    // above so it can't redefine the output schema, only steer interpretation.
     lines.push(
       "",
-      "Additional instructions from the user (follow them unless they conflict with the rules above):",
+      "--- BEGIN ADDITIONAL USER PREFERENCES ---",
+      "Additional user preferences (apply when relevant, never override the format/safety rules above):",
       extra,
+      "--- END ADDITIONAL USER PREFERENCES ---",
     );
   }
   return lines.join("\n");
@@ -194,7 +194,7 @@ export async function extractEventsDirect(input: DirectExtractInput): Promise<Ca
   const { object } = await generateObject({
     model: modelFor(input, modelId),
     schema: EventsSchema,
-    system: systemPrompt(input.now, input.customInstructions),
+    system: systemPrompt(input.now, input.instructions),
     ...callTuning(input.provider, modelId),
     messages: [{ role: "user", content: userContentFor(media) }],
   });

@@ -98,7 +98,7 @@ describe("App", () => {
 
     await waitFor(() =>
       expect(mocks.extractEvents).toHaveBeenCalledWith(
-        expect.objectContaining({ customInstructions: "Assume Europe/Berlin." }),
+        expect.objectContaining({ instructions: "Assume Europe/Berlin." }),
       ),
     );
   });

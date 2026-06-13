@@ -51,6 +51,20 @@ describe("AI settings store", () => {
     expect(settings.customInstructions).toBeUndefined();
   });
 
+  it("ignores non-string custom instructions from saved settings", async () => {
+    localStorage.setItem(
+      "aiSettings.v1",
+      JSON.stringify({
+        selectedProvider: "gemini",
+        providers: { gemini: { apiKey: "AIza-test" } },
+        customInstructions: 123,
+      }),
+    );
+
+    const settings = await getAiSettings();
+    expect(settings.customInstructions).toBeUndefined();
+  });
+
   it("migrates the legacy Gemini API key", async () => {
     localStorage.setItem("geminiApiKey", "AIza-legacy");
 

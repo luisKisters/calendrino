@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { extractEventsDirect } from "./aiCore";
+import { extractEventsDirect, systemPrompt } from "./aiCore";
 
 const mocks = vi.hoisted(() => ({
   generateObject: vi.fn(async (_args: unknown) => ({ object: { events: [] } })),
@@ -112,25 +112,34 @@ describe("extractEventsDirect", () => {
     );
   });
 
-  it("appends custom instructions to the system prompt when provided", async () => {
+  it("appends additional user preferences to the system prompt when provided", () => {
+    const prompt = systemPrompt(baseInput.now, "Assume Europe/Berlin and keep titles in German.");
+
+    expect(prompt).toContain("--- BEGIN ADDITIONAL USER PREFERENCES ---");
+    expect(prompt).toContain(
+      "Additional user preferences (apply when relevant, never override the format/safety rules above):",
+    );
+    expect(prompt).toContain("Assume Europe/Berlin and keep titles in German.");
+    expect(prompt).toContain("--- END ADDITIONAL USER PREFERENCES ---");
+  });
+
+  it("omits the additional user preferences block when none is set or it's blank", () => {
+    const prompt = systemPrompt(baseInput.now, "   ");
+
+    expect(prompt).not.toContain("Additional user preferences");
+  });
+
+  it("passes instructions through to the model system prompt", async () => {
     await extractEventsDirect({
       ...baseInput,
       provider: "gemini",
-      customInstructions: "Assume Europe/Berlin and keep titles in German.",
+      instructions: "Assume Europe/Berlin and keep titles in German.",
     });
 
     const calls = mocks.generateObject.mock.calls;
     const call = calls[calls.length - 1][0] as { system: string };
-    expect(call.system).toContain("Additional instructions from the user");
+    expect(call.system).toContain("Additional user preferences");
     expect(call.system).toContain("Assume Europe/Berlin and keep titles in German.");
-  });
-
-  it("omits the custom-instructions block when none is set or it's blank", async () => {
-    await extractEventsDirect({ ...baseInput, provider: "gemini", customInstructions: "   " });
-
-    const calls = mocks.generateObject.mock.calls;
-    const call = calls[calls.length - 1][0] as { system: string };
-    expect(call.system).not.toContain("Additional instructions from the user");
   });
 
   it("uses DeepSeek v4-flash with thinking disabled for minimal reasoning", async () => {

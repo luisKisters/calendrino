@@ -34,7 +34,7 @@ describe("extractEvents", () => {
   });
 
   it("uses the browser proxy outside Tauri", async () => {
-    await extractEvents(baseInput);
+    await extractEvents({ ...baseInput, instructions: "Assume Europe/Berlin." });
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "/api/extract",
@@ -50,6 +50,7 @@ describe("extractEvents", () => {
         mediaType: "image/png",
         provider: "openai",
         apiKey: "key",
+        instructions: "Assume Europe/Berlin.",
       }),
     );
     expect(mocks.extractEventsDirect).not.toHaveBeenCalled();
@@ -64,9 +65,11 @@ describe("extractEvents", () => {
   it("keeps direct extraction in Tauri", async () => {
     mocks.isTauri.mockReturnValue(true);
 
-    await extractEvents(baseInput);
+    await extractEvents({ ...baseInput, instructions: "Assume Europe/Berlin." });
 
-    expect(mocks.extractEventsDirect).toHaveBeenCalledWith(expect.objectContaining({ bytes: baseInput.bytes }));
+    expect(mocks.extractEventsDirect).toHaveBeenCalledWith(
+      expect.objectContaining({ bytes: baseInput.bytes, instructions: "Assume Europe/Berlin." }),
+    );
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });

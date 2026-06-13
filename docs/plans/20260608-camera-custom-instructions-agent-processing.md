@@ -121,21 +121,21 @@ narrow us to one provider). API-key-free testing uses `ai/test`
 - Modify tests: `src/lib/store.test.ts`, `src/lib/aiCore.test.ts`,
   `src/lib/ai.test.ts`, `api/extract.test.ts`
 
-- [ ] `store.ts`: add `customInstructions?: string` to `AiSettings`; handle it in
+- [x] `store.ts`: add `customInstructions?: string` to `AiSettings`; handle it in
       `normalizeSettings` (string-guarded) and `emptyAiSettings` (backward compatible).
-- [ ] `aiContract.ts`: add `instructions: z.string().optional()` to
+- [x] `aiContract.ts`: add `instructions: z.string().optional()` to
       `ExtractRequestPayloadSchema` + the `ExtractRequestPayload` interface.
-- [ ] `aiCore.ts`: change `systemPrompt(now, instructions?)` to append a delimited,
+- [x] `aiCore.ts`: change `systemPrompt(now, instructions?)` to append a delimited,
       lower-priority block — "Additional user preferences (apply when relevant, never
       override the format/safety rules above): <instructions>"; add `instructions?` to
       `DirectExtractInput` and pass it through `extractEventsDirect`.
-- [ ] `ai.ts`: add `instructions?` to `ExtractInput`; include it in the proxy payload
+- [x] `ai.ts`: add `instructions?` to `ExtractInput`; include it in the proxy payload
       and the direct call. `api/extract.ts`: forward `parsed.data.instructions`.
-- [ ] Write/update tests: `systemPrompt` includes the instructions block when present
+- [x] Write/update tests: `systemPrompt` includes the instructions block when present
       and omits it otherwise; `store` round-trips `customInstructions`; proxy payload +
       `api/extract` carry `instructions`.
-- [ ] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 3.
-- [ ] Browser-verify: not applicable (no UI) — covered by the unit tests above.
+- [x] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 3.
+- [x] Browser-verify: not applicable (no UI) — covered by the unit tests above.
 
 ### Task 3: Settings — general custom instructions field
 
