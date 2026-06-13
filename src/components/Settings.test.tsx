@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Settings } from "./Settings";
@@ -22,9 +22,12 @@ describe("Settings", () => {
     expect(screen.getByLabelText("OpenRouter API key")).toBeInTheDocument();
     expect(screen.getByLabelText("Model")).toHaveValue("moonshotai/kimi-k2.6");
 
-    await user.clear(screen.getByLabelText("Model"));
-    await user.type(screen.getByLabelText("Model"), "openai/gpt-4.1");
-    await user.type(screen.getByLabelText("OpenRouter API key"), "sk-or-test");
+    fireEvent.change(screen.getByLabelText("Model"), {
+      target: { value: "openai/gpt-4.1" },
+    });
+    fireEvent.change(screen.getByLabelText("OpenRouter API key"), {
+      target: { value: "sk-or-test" },
+    });
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(onSave).toHaveBeenCalledWith({
@@ -32,6 +35,7 @@ describe("Settings", () => {
       providers: {
         openrouter: { apiKey: "sk-or-test", model: "openai/gpt-4.1" },
       },
+      customInstructions: undefined,
     });
   });
 
@@ -47,7 +51,14 @@ describe("Settings", () => {
       />,
     );
 
-    await user.type(screen.getByLabelText(/Custom instructions/i), "Titles in English.");
+    const instructions = screen.getByLabelText("Custom instructions");
+    expect(instructions.tagName).toBe("TEXTAREA");
+    expect(instructions.className).toContain("border-ink");
+    expect(instructions.className).toContain("focus-visible:ring-teal");
+
+    fireEvent.change(instructions, {
+      target: { value: "Titles in English." },
+    });
     await user.click(screen.getByRole("button", { name: /Assume the Europe\/Berlin timezone/i }));
     await user.click(screen.getByRole("button", { name: "Save" }));
 

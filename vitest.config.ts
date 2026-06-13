@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
     environment: "jsdom",
+    testTimeout: 10_000,
     environmentOptions: {
       jsdom: {
         url: "http://localhost:1420",

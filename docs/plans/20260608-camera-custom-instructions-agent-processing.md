@@ -143,15 +143,15 @@ narrow us to one provider). API-key-free testing uses `ai/test`
 - Modify: `src/components/riso/RisoField.tsx` (add `RisoTextarea`),
   `src/components/Settings.tsx`, `src/components/Settings.test.tsx`
 
-- [ ] Add `RisoTextarea` to `RisoField.tsx` mirroring `RisoField` styling
+- [x] Add `RisoTextarea` to `RisoField.tsx` mirroring `RisoField` styling
       (label + ink-bordered `<textarea>`, riso focus ring, ≥44px hit area).
-- [ ] `Settings.tsx`: add a "Custom instructions" `RisoTextarea` bound to a new
+- [x] `Settings.tsx`: add a "Custom instructions" `RisoTextarea` bound to a new
       `customInstructions` piece of state; include it in the `onSave` payload so it
       persists (global — not per provider).
-- [ ] Write/update tests: `Settings.test.tsx` — editing + saving persists
+- [x] Write/update tests: `Settings.test.tsx` — editing + saving persists
       `customInstructions` (assert it reaches `onSave`).
-- [ ] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 4.
-- [ ] agent-browser verify: type general instructions, save, reopen settings → value
+- [x] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 4.
+- [x] agent-browser verify: type general instructions, save, reopen settings → value
       retained; screenshot.
 
 ### Task 4: Bottom sheet + one-time note entry on capture

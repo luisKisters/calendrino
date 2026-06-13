@@ -3,7 +3,7 @@ import { openExternal } from "../lib/platform";
 import { AI_PROVIDER_ORDER, getProviderConfig, type AiProviderId } from "../lib/aiProviders";
 import type { AiSettings } from "../lib/store";
 import { RisoButton } from "./riso/RisoButton";
-import { RisoField } from "./riso/RisoField";
+import { RisoField, RisoTextarea } from "./riso/RisoField";
 import { MiniStamp } from "./riso/Stamp";
 import { Icon } from "./riso/Icon";
 
@@ -181,18 +181,9 @@ export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: S
 
       {/* Custom instructions (optional) */}
       <div className="mb-6">
-        <label
-          htmlFor="customInstructions"
-          className="mb-[5px] block font-mono text-[9.5px] uppercase tracking-[0.1em] text-ink-soft"
-        >
-          Custom instructions (optional)
-        </label>
-        <p className="mb-2 text-[12px] leading-relaxed text-ink-soft">
-          Extra guidance sent with every capture — a default timezone, a language, or how to read
-          your schedules. Tap a suggestion to add it.
-        </p>
-        <textarea
+        <RisoTextarea
           id="customInstructions"
+          label="Custom instructions"
           value={customInstructions}
           onChange={(e) => {
             setCustomInstructions(e.target.value);
@@ -201,8 +192,11 @@ export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: S
           rows={3}
           placeholder="e.g. Assume Europe/Berlin and keep titles in German."
           spellCheck={false}
-          className="w-full resize-y rounded-[11px] border-2 border-ink bg-paper-2 px-[11px] py-[10px] text-[13.5px] font-semibold text-ink outline-none placeholder:text-ink-soft"
         />
+        <p className="mt-2 text-[12px] leading-relaxed text-ink-soft">
+          Extra guidance sent with every capture — a default timezone, a language, or how to read
+          your schedules. Tap a suggestion to add it.
+        </p>
         <div className="mt-2 flex flex-wrap gap-[6px]">
           {INSTRUCTION_PRESETS.map((preset) => (
             <button
