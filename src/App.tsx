@@ -26,6 +26,7 @@ type Screen =
 export default function App() {
   const [settings, setSettings] = useState<AiSettings>(emptyAiSettings());
   const [screen, setScreen] = useState<Screen>({ name: "loading" });
+  const [oneTimeInstruction, setOneTimeInstruction] = useState("");
 
   useEffect(() => {
     getAiSettings().then((next) => {
@@ -42,6 +43,16 @@ export default function App() {
     setTimeout(() => setScreen({ name: "capture" }), 900);
   }
 
+  async function handleSaveGeneralInstructions(instructions: string) {
+    const trimmed = instructions.trim();
+    const next = {
+      ...settings,
+      customInstructions: trimmed || undefined,
+    };
+    await setAiSettings(next);
+    setSettings(next);
+  }
+
   async function handleFile(file: File) {
     const provider = settings.selectedProvider;
     const config = getProviderConfig(provider);
@@ -54,13 +65,14 @@ export default function App() {
     setScreen({ name: "processing", label: isPdf ? "Reading your document…" : "Reading your photo…" });
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
+      const instructions = buildInstructions(settings.customInstructions, oneTimeInstruction);
       const events = await extractEvents({
         bytes,
         mediaType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
         provider,
         apiKey: providerSettings.apiKey,
         model: providerSettings.model,
-        instructions: settings.customInstructions,
+        instructions,
         now: nowContext(),
       });
       // A single event is the common case: open Google Calendar straight away so
@@ -74,6 +86,8 @@ export default function App() {
       setScreen({ name: "review", events });
     } catch (err) {
       setScreen(classifyError(err, config.label));
+    } finally {
+      setOneTimeInstruction("");
     }
   }
 
@@ -106,7 +120,16 @@ export default function App() {
         );
       }
       case "capture":
-        return <Capture onFile={handleFile} />;
+        return (
+          <Capture
+            onFile={handleFile}
+            generalInstructions={settings.customInstructions}
+            onSaveGeneralInstructions={handleSaveGeneralInstructions}
+            onOpenSettings={() => setScreen({ name: "settings" })}
+            oneTimeInstruction={oneTimeInstruction}
+            onOneTimeInstructionChange={setOneTimeInstruction}
+          />
+        );
       case "processing":
         return <Processing label={screen.label} onCancel={() => setScreen({ name: "capture" })} />;
       case "review":
@@ -145,6 +168,17 @@ export default function App() {
       </main>
     </>
   );
+}
+
+function buildInstructions(generalInstructions: string | undefined, oneTimeInstruction: string): string | undefined {
+  const general = generalInstructions?.trim() ?? "";
+  const oneTime = oneTimeInstruction.trim();
+
+  if (!general) return oneTime || undefined;
+  if (!oneTime) return general;
+
+  const existingLines = general.split(/\r?\n/).map((line) => line.trim());
+  return existingLines.includes(oneTime) ? general : `${general}\n${oneTime}`;
 }
 
 function classifyError(err: unknown, providerLabel: string): Screen {

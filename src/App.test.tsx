@@ -103,6 +103,65 @@ describe("App", () => {
     );
   });
 
+  it("combines saved and one-time instructions for extraction", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openai",
+      providers: { openai: { apiKey: "sk-test", model: "gpt-4.1" } },
+      customInstructions: "Assume Europe/Berlin.",
+    });
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    await user.click(screen.getByRole("button", { name: /add a note for this scan/i }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Note for this scan" }),
+      "Only include the highlighted row.",
+    );
+    await user.click(screen.getByRole("button", { name: /save note/i }));
+    expect(await screen.findByText("Only include the highlighted row.")).toBeInTheDocument();
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    await waitFor(() =>
+      expect(mocks.extractEvents).toHaveBeenCalledWith(
+        expect.objectContaining({
+          instructions: "Assume Europe/Berlin.\nOnly include the highlighted row.",
+        }),
+      ),
+    );
+  });
+
+  it("saves a scan note to general instructions when requested", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openai",
+      providers: { openai: { apiKey: "sk-test", model: "gpt-4.1" } },
+      customInstructions: "Keep titles in English.",
+    });
+
+    render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    await user.click(screen.getByRole("button", { name: /add a note for this scan/i }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Note for this scan" }),
+      "Prefer venue names from the left column.",
+    );
+    await user.click(screen.getByLabelText(/also save to my general instructions/i));
+    await user.click(screen.getByRole("button", { name: /save note/i }));
+
+    await waitFor(() =>
+      expect(mocks.setAiSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customInstructions: "Keep titles in English.\nPrefer venue names from the left column.",
+        }),
+      ),
+    );
+  });
+
   it("uploads an image and renders extracted events", async () => {
     const user = userEvent.setup();
     mocks.getAiSettings.mockResolvedValue({

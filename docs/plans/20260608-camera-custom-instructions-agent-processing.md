@@ -160,20 +160,20 @@ narrow us to one provider). API-key-free testing uses `ai/test`
 - Create: `src/components/riso/Sheet.tsx`, `src/components/riso/Sheet.test.tsx`
 - Modify: `src/components/Capture.tsx`, `src/App.tsx`, `src/App.test.tsx`
 
-- [ ] Add `Sheet` — riso bottom sheet (multiply backdrop, `border-t-2 border-ink`
+- [x] Add `Sheet` — riso bottom sheet (multiply backdrop, `border-t-2 border-ink`
       slide-up panel, safe-area padding, focus trap, Esc/backdrop close, no transform
       animation under `prefers-reduced-motion`).
-- [ ] `App.tsx`: own `oneTimeInstruction` state; pass `generalInstructions`, a
+- [x] `App.tsx`: own `oneTimeInstruction` state; pass `generalInstructions`, a
       save-general handler, `onOpenSettings`, and the one-time getter/setter to `Capture`.
-- [ ] `Capture.tsx`: add an unobtrusive ghost "+ Add a note for this scan" control that
+- [x] `Capture.tsx`: add an unobtrusive ghost "+ Add a note for this scan" control that
       opens the `Sheet` (textarea + "Also save to my general instructions" toggle +
       "Edit general instructions →" link). When a note is active, show it as a
       removable chip. Keep the two primary buttons uncluttered.
-- [ ] Write tests: `Sheet.test.tsx` (open/close, toggle, link callback);
+- [x] Write tests: `Sheet.test.tsx` (open/close, toggle, link callback);
       `Capture` shows the chip when a note is set and clears it on remove; `App.test.tsx`
       passes the note + general instructions into `extractEvents`/stream.
-- [ ] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 5.
-- [ ] agent-browser verify: open the sheet, add a note, toggle save-to-general, confirm
+- [x] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 5.
+- [x] agent-browser verify: open the sheet, add a note, toggle save-to-general, confirm
       chip appears; screenshot.
 
 ### Task 5: Live embedded camera + capture buttons
