@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Icon } from "./riso/Icon";
 import { RisoButton } from "./riso/RisoButton";
 import { Halftone } from "./riso/Halftone";
@@ -14,6 +14,9 @@ interface CaptureProps {
   oneTimeInstruction?: string;
   onOneTimeInstructionChange?: (instruction: string) => void;
 }
+
+type CameraState = "idle" | "starting" | "ready" | "fallback";
+const CAMERA_REQUEST_TIMEOUT_MS = 2500;
 
 function appendUniqueInstruction(existing: string | undefined, note: string): string {
   const trimmedExisting = existing?.trim() ?? "";
@@ -36,10 +39,34 @@ export function Capture({
 }: CaptureProps) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mountedRef = useRef(true);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraState, setCameraState] = useState<CameraState>(() =>
+    canUseCameraStream() ? "idle" : "fallback",
+  );
   const [noteSheetOpen, setNoteSheetOpen] = useState(false);
   const [draftNote, setDraftNote] = useState("");
   const [saveToGeneral, setSaveToGeneral] = useState(false);
   const activeNote = oneTimeInstruction.trim();
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      stopStream(streamRef.current);
+      streamRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!streamRef.current || !videoRef.current) return;
+
+    videoRef.current.srcObject = streamRef.current;
+    const playResult = videoRef.current.play();
+    if (playResult) {
+      playResult.catch(() => undefined);
+    }
+  }, [cameraState]);
 
   function handlePick(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -67,27 +94,89 @@ export function Capture({
     onOpenSettings?.();
   }
 
+  function replaceStream(nextStream: MediaStream | null) {
+    stopStream(streamRef.current);
+    streamRef.current = nextStream;
+  }
+
+  async function enableCamera() {
+    if (!canUseCameraStream()) {
+      setCameraState("fallback");
+      cameraRef.current?.click();
+      return;
+    }
+
+    setCameraState("starting");
+    try {
+      const nextStream = await requestCameraStream({
+        video: { facingMode: "environment" },
+      });
+      if (!mountedRef.current) {
+        stopStream(nextStream);
+        return;
+      }
+      replaceStream(nextStream);
+      setCameraState("ready");
+    } catch {
+      if (!mountedRef.current) return;
+      replaceStream(null);
+      setCameraState("fallback");
+    }
+  }
+
+  async function handleShutter() {
+    if (cameraState === "starting") return;
+    if (cameraState === "fallback") {
+      cameraRef.current?.click();
+      return;
+    }
+    if (cameraState !== "ready") {
+      await enableCamera();
+      return;
+    }
+
+    const captured = await captureVideoFrame(videoRef.current);
+    if (captured) {
+      onFile(captured);
+      return;
+    }
+    setCameraState("fallback");
+    cameraRef.current?.click();
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-3 px-4 pb-4 pt-3">
       {/* capture zone */}
       <CaptureFrame>
-        <div className="flex h-full flex-col items-center justify-center gap-3 p-5 text-center">
-          <Halftone />
-          {/* red camera blob */}
-          <div
+        {cameraState === "ready" ? (
+          <video
+            ref={videoRef}
+            data-testid="camera-preview"
+            className="absolute inset-0 h-full w-full object-cover"
+            autoPlay
+            muted
+            playsInline
+          />
+        ) : (
+          <StaticCaptureArt busy={cameraState === "starting"} />
+        )}
+        <button
+          type="button"
+          aria-label="Take photo"
+          onClick={handleShutter}
+          disabled={cameraState === "starting"}
+          className="absolute bottom-4 left-1/2 z-20 grid h-16 w-16 -translate-x-1/2 place-items-center rounded-full border-2 border-ink bg-paper text-ink shadow-[0_3px_0_var(--ink)] [mix-blend-mode:multiply] transition-transform hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
+        >
+          <span
             aria-hidden="true"
-            className="relative z-10 grid place-items-center rounded-full bg-red text-paper [mix-blend-mode:multiply]"
-            style={{ width: 62, height: 62 }}
+            className={[
+              "grid h-11 w-11 place-items-center rounded-full border-2 border-ink",
+              cameraState === "ready" ? "bg-red text-paper" : "bg-teal text-paper",
+            ].join(" ")}
           >
-            <Icon name="camera" size={26} aria-hidden={true} />
-          </div>
-          <h2 className="relative z-10 font-display font-extrabold text-[20px] leading-[1.05] text-ink">
-            Snap or drop<br />anything
-          </h2>
-          <p className="relative z-10 m-0 text-[12.5px] text-ink-soft">
-            Poster · ticket · email · PDF
-          </p>
-        </div>
+            <Icon name="camera" size={21} aria-hidden={true} />
+          </span>
+        </button>
       </CaptureFrame>
 
       <div className="flex flex-col gap-2">
@@ -115,16 +204,6 @@ export function Capture({
           + Add a note for this scan
         </button>
       </div>
-
-      {/* action buttons */}
-      <RisoButton
-        variant="primary"
-        onClick={() => cameraRef.current?.click()}
-        className="w-full"
-      >
-        <Icon name="camera" size={18} aria-hidden={true} />
-        Take photo
-      </RisoButton>
 
       <RisoButton
         variant="secondary"
@@ -203,4 +282,121 @@ export function Capture({
       </Sheet>
     </div>
   );
+}
+
+function StaticCaptureArt({ busy }: { busy: boolean }) {
+  return (
+    <div
+      data-testid="camera-fallback-art"
+      className="flex h-full flex-col items-center justify-center gap-3 p-5 pb-24 text-center"
+    >
+      <Halftone />
+      {/* red camera blob */}
+      <div
+        aria-hidden="true"
+        className="relative z-10 grid place-items-center rounded-full bg-red text-paper [mix-blend-mode:multiply]"
+        style={{ width: 62, height: 62 }}
+      >
+        <Icon name="camera" size={26} aria-hidden={true} />
+      </div>
+      <h2 className="relative z-10 font-display font-extrabold text-[20px] leading-[1.05] text-ink">
+        {busy ? "Starting camera" : <>Snap or drop<br />anything</>}
+      </h2>
+      <p className="relative z-10 m-0 text-[12.5px] text-ink-soft">
+        Poster · ticket · email · PDF
+      </p>
+    </div>
+  );
+}
+
+function canUseCameraStream() {
+  return Boolean(getCameraStreamSource());
+}
+
+function requestCameraStream(constraints: MediaStreamConstraints): Promise<MediaStream> {
+  const getUserMedia = getCameraStreamSource();
+  if (!getUserMedia) {
+    return Promise.reject(new DOMException("Camera unavailable", "NotFoundError"));
+  }
+
+  let timedOut = false;
+
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      reject(new DOMException("Camera request timed out", "TimeoutError"));
+    }, CAMERA_REQUEST_TIMEOUT_MS);
+
+    let request: Promise<MediaStream>;
+    try {
+      request = getUserMedia(constraints);
+    } catch (error) {
+      window.clearTimeout(timeoutId);
+      reject(error);
+      return;
+    }
+
+    request.then(
+      (stream) => {
+        if (timedOut) {
+          stopStream(stream);
+          return;
+        }
+        window.clearTimeout(timeoutId);
+        resolve(stream);
+      },
+      (error: unknown) => {
+        if (timedOut) return;
+        window.clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
+
+function getCameraStreamSource() {
+  const cameraMode = cameraModeForTest();
+  if (cameraMode === "unavailable") {
+    return null;
+  }
+
+  if (typeof navigator === "undefined") return null;
+  const mediaDevices = navigator.mediaDevices;
+  if (!mediaDevices?.getUserMedia) return null;
+  return mediaDevices.getUserMedia.bind(mediaDevices);
+}
+
+function cameraModeForTest() {
+  if (typeof window === "undefined") return null;
+  const mode = new URLSearchParams(window.location.search).get("camera");
+  return mode === "unavailable" ? mode : null;
+}
+
+function stopStream(stream: MediaStream | null) {
+  stream?.getTracks().forEach((track) => track.stop());
+}
+
+async function captureVideoFrame(video: HTMLVideoElement | null): Promise<File | null> {
+  if (!video) return null;
+
+  const width = video.videoWidth || video.clientWidth || 1280;
+  const height = video.videoHeight || video.clientHeight || 720;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context || !canvas.toBlob) return null;
+
+  context.drawImage(video, 0, 0, width, height);
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/jpeg", 0.92);
+  });
+  if (!blob) return null;
+
+  return new File([blob], `calendrino-photo-${Date.now()}.jpg`, {
+    type: "image/jpeg",
+    lastModified: Date.now(),
+  });
 }

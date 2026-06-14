@@ -19,10 +19,27 @@ test("capture screen shows riso logo and heading", async ({ page }) => {
   // Capture zone headline
   await expect(page.getByText("Snap or drop")).toBeVisible();
 
-  // Primary action button
+  // In-frame shutter
   await expect(page.getByRole("button", { name: /take photo/i })).toBeVisible();
 
   // Secondary action button
+  await expect(page.getByRole("button", { name: /upload file/i })).toBeVisible();
+});
+
+test("capture screen falls back to native capture when camera is unavailable", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "aiSettings.v1",
+      JSON.stringify({
+        selectedProvider: "openai",
+        providers: { openai: { apiKey: "sk-test", model: "gpt-4.1" } },
+      }),
+    );
+  });
+  await page.goto("/?camera=unavailable");
+
+  await expect(page.getByRole("heading", { name: /snap or drop anything/i })).toBeVisible();
+  await expect(page.locator('input[accept="image/*"][capture="environment"]')).toHaveCount(1);
   await expect(page.getByRole("button", { name: /upload file/i })).toBeVisible();
 });
 
