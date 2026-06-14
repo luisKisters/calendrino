@@ -22,11 +22,11 @@ async function gotoSuccess(page: import("@playwright/test").Page) {
     );
   });
 
-  await page.route("**/api/extract", async (route) => {
+  await page.route("**/api/extract-stream", async (route) => {
     await route.fulfill({
       status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ events: [STUB_EVENT] }),
+      contentType: "application/x-ndjson",
+      body: `${JSON.stringify({ kind: "status", text: "Reading the capture." })}\n${JSON.stringify({ kind: "done", events: [STUB_EVENT] })}\n`,
     });
   });
 

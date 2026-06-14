@@ -1,11 +1,11 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
-interface CaptureFrameProps {
+interface CaptureFrameProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   className?: string;
 }
 
-export function CaptureFrame({ children, className = "" }: CaptureFrameProps) {
+export function CaptureFrame({ children, className = "", ...rest }: CaptureFrameProps) {
   return (
     <div
       className={[
@@ -14,6 +14,7 @@ export function CaptureFrame({ children, className = "" }: CaptureFrameProps) {
       ]
         .filter(Boolean)
         .join(" ")}
+      {...rest}
     >
       {children}
     </div>

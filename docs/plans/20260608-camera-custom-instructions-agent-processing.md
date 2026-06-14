@@ -252,25 +252,25 @@ narrow us to one provider). API-key-free testing uses `ai/test`
 - Modify: `src/components/Processing.tsx`, `src/App.tsx`,
   `src/components/Processing.test.tsx`, `src/App.test.tsx`, `e2e/processing.spec.ts`
 
-- [ ] Rewrite `Processing` to use `CaptureFrame` (flex-1 — same size/border as capture):
+- [x] Rewrite `Processing` to use `CaptureFrame` (flex-1 — same size/border as capture):
       `previewUrl` as an `object-cover` background, dark multiply + teal overlay +
       halftone (keep the riso scan sweep, reduced-motion aware); overlay an
       "Agent is working" header (riso sparkle) and a scrolling monospace transcript that
       appends `status`/`thinking`/`found` lines (auto-scroll). Keep
       `data-testid="riso-thumb"`; add `data-testid="agent-transcript"`. Cancel → abort.
-- [ ] `App.tsx`: `processing` state carries `previewUrl`, `mediaType`, and live
+- [x] `App.tsx`: `processing` state carries `previewUrl`, `mediaType`, and live
       `transcript`. `handleFile` computes the preview (image vs `renderPdfFirstPage`),
       builds combined `instructions` (`[general, oneTime].filter(Boolean).join("\n")`),
       runs `streamExtraction` with an `AbortController`, appends chunks; on `done` keep
       the single-event auto-open + review behaviour; on `error` use `classifyError`.
       **Clear `oneTimeInstruction` when the scan finishes** (success or error); revoke
       object URLs on cleanup.
-- [ ] Write/update tests: `Processing.test.tsx` (preview frame + transcript render;
+- [x] Write/update tests: `Processing.test.tsx` (preview frame + transcript render;
       remove skeleton-row assertions); `App.test.tsx` (stream mocked → review, one-time
       note cleared after run); `e2e/processing.spec.ts` stubs `/api/extract-stream` with
       NDJSON and asserts the transcript + preview + Cancel→capture.
-- [ ] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 9.
-- [ ] agent-browser verify: drive an **image** and a **PDF** into processing — darkened
+- [x] Run `pnpm run test:all` and `pnpm run build` — must pass before Task 9.
+- [x] agent-browser verify: drive an **image** and a **PDF** into processing — darkened
       preview (same frame size as capture), "Agent is working", streaming transcript;
       confirm the one-time note is gone afterward; screenshots.
 

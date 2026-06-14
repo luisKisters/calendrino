@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// Navigate to the error screen by stubbing /api/extract to return 401.
+// Navigate to the error screen by stubbing /api/extract-stream to return 401.
 async function gotoAuthError(page: import("@playwright/test").Page) {
   await page.addInitScript(() => {
     localStorage.setItem(
@@ -12,11 +12,11 @@ async function gotoAuthError(page: import("@playwright/test").Page) {
     );
   });
 
-  await page.route("**/api/extract", async (route) => {
+  await page.route("**/api/extract-stream", async (route) => {
     await route.fulfill({
       status: 401,
-      contentType: "application/json",
-      body: JSON.stringify({ error: "401: Invalid API key" }),
+      contentType: "application/x-ndjson",
+      body: `${JSON.stringify({ kind: "error", message: "401: Invalid API key" })}\n`,
     });
   });
 
@@ -91,7 +91,7 @@ test("processing scan animation is off under prefers-reduced-motion", async ({ p
       }),
     );
   });
-  await page.route("**/api/extract", () => { /* never fulfill */ });
+  await page.route("**/api/extract-stream", () => { /* never fulfill */ });
   await page.goto("/");
   await expect(page.getByRole("button", { name: /take photo/i })).toBeVisible();
   const input = page.locator('input[type="file"]').first();

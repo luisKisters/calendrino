@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Header } from "./components/Header";
 import { Settings } from "./components/Settings";
 import { Capture } from "./components/Capture";
@@ -8,17 +8,19 @@ import { Success } from "./components/Success";
 import { ErrorView } from "./components/ErrorView";
 import { emptyAiSettings, getAiSettings, setAiSettings, type AiSettings } from "./lib/store";
 import { nowContext } from "./lib/datetime";
-import { extractEvents } from "./lib/ai";
+import { streamExtraction } from "./lib/ai";
 import { buildGCalUrl } from "./lib/gcal";
 import { openExternal } from "./lib/platform";
 import type { CalendarEvent } from "./lib/schema";
 import { getProviderConfig } from "./lib/aiProviders";
+import { imagePreviewUrl, renderPdfFirstPage } from "./lib/pdfPreview";
+import type { TranscriptChunk } from "./lib/transcript";
 
 type Screen =
   | { name: "loading" }
   | { name: "settings" }
   | { name: "capture" }
-  | { name: "processing"; label: string }
+  | { name: "processing"; previewUrl: string; mediaType: string; transcript: TranscriptChunk[] }
   | { name: "review"; events: CalendarEvent[] }
   | { name: "success"; event: CalendarEvent }
   | { name: "error"; message: string; detail?: string };
@@ -27,6 +29,9 @@ export default function App() {
   const [settings, setSettings] = useState<AiSettings>(emptyAiSettings());
   const [screen, setScreen] = useState<Screen>({ name: "loading" });
   const [oneTimeInstruction, setOneTimeInstruction] = useState("");
+  const activeRunIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const activeObjectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     getAiSettings().then((next) => {
@@ -34,6 +39,15 @@ export default function App() {
       const providerSettings = next.providers[next.selectedProvider];
       setScreen(providerSettings?.apiKey ? { name: "capture" } : { name: "settings" });
     });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      activeRunIdRef.current += 1;
+      abortRef.current?.abort();
+      abortRef.current = null;
+      revokeActiveObjectUrl();
+    };
   }, []);
 
   async function handleSaveSettings(next: AiSettings) {
@@ -61,34 +75,113 @@ export default function App() {
       setScreen({ name: "settings" });
       return;
     }
-    const isPdf = file.type === "application/pdf";
-    setScreen({ name: "processing", label: isPdf ? "Reading your document…" : "Reading your photo…" });
+
+    const mediaType = mediaTypeFor(file);
+    const runId = activeRunIdRef.current + 1;
+    activeRunIdRef.current = runId;
+    abortRef.current?.abort();
+    const abortController = new AbortController();
+    abortRef.current = abortController;
+    revokeActiveObjectUrl();
+
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
+      const previewUrl = await previewUrlFor(file, mediaType, bytes);
+      if (!isActiveRun(runId, abortController)) return;
+
+      setScreen({
+        name: "processing",
+        previewUrl,
+        mediaType,
+        transcript: [{ kind: "status", text: "Preparing the capture preview." }],
+      });
+
       const instructions = buildInstructions(settings.customInstructions, oneTimeInstruction);
-      const events = await extractEvents({
+      let finished = false;
+      for await (const chunk of streamExtraction({
         bytes,
-        mediaType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
+        mediaType,
         provider,
         apiKey: providerSettings.apiKey,
         model: providerSettings.model,
         instructions,
         now: nowContext(),
-      });
-      // A single event is the common case: open Google Calendar straight away so
-      // the user doesn't have to tap "Add". Best-effort — on web a popup blocker
-      // may swallow it after the await, so we still land on the review screen,
-      // where the same event is one tap away as a fallback.
-      if (events.length === 1) {
-        // Best-effort: popup blockers or OS URL-handler failures must not lose the events.
-        try { await openExternal(buildGCalUrl(events[0])); } catch { /* fall through */ }
+      }, abortController.signal)) {
+        if (!isActiveRun(runId, abortController)) return;
+
+        if (chunk.kind === "done") {
+          finished = true;
+          await handleExtractedEvents(chunk.events);
+          return;
+        }
+
+        if (chunk.kind === "error") {
+          finished = true;
+          throw new Error(chunk.message);
+        }
+
+        appendTranscript(chunk);
       }
-      setScreen({ name: "review", events });
+
+      if (!finished) {
+        throw new Error("AI extraction stream ended before returning events.");
+      }
     } catch (err) {
+      if (!isActiveRun(runId, abortController)) return;
       setScreen(classifyError(err, config.label));
     } finally {
-      setOneTimeInstruction("");
+      if (isActiveRun(runId, abortController)) {
+        abortRef.current = null;
+        setOneTimeInstruction("");
+        revokeActiveObjectUrl();
+      }
     }
+  }
+
+  async function handleExtractedEvents(events: CalendarEvent[]) {
+    // A single event is the common case: open Google Calendar straight away so
+    // the user doesn't have to tap "Add". Best-effort — on web a popup blocker
+    // may swallow it after the await, so we still land on the review screen,
+    // where the same event is one tap away as a fallback.
+    if (events.length === 1) {
+      try { await openExternal(buildGCalUrl(events[0])); } catch { /* fall through */ }
+    }
+    setScreen({ name: "review", events });
+  }
+
+  function handleCancelProcessing() {
+    activeRunIdRef.current += 1;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    revokeActiveObjectUrl();
+    setScreen({ name: "capture" });
+  }
+
+  function appendTranscript(chunk: TranscriptChunk) {
+    setScreen((current) => {
+      if (current.name !== "processing") return current;
+      return { ...current, transcript: [...current.transcript, chunk] };
+    });
+  }
+
+  function isActiveRun(runId: number, abortController: AbortController) {
+    return activeRunIdRef.current === runId && !abortController.signal.aborted;
+  }
+
+  async function previewUrlFor(file: File, mediaType: string, bytes: Uint8Array): Promise<string> {
+    if (mediaType === "application/pdf") {
+      return renderPdfFirstPage(bytes);
+    }
+
+    const previewUrl = imagePreviewUrl(file);
+    activeObjectUrlRef.current = previewUrl;
+    return previewUrl;
+  }
+
+  function revokeActiveObjectUrl() {
+    if (!activeObjectUrlRef.current) return;
+    URL.revokeObjectURL?.(activeObjectUrlRef.current);
+    activeObjectUrlRef.current = null;
   }
 
   async function handleAdd(event: CalendarEvent) {
@@ -131,7 +224,14 @@ export default function App() {
           />
         );
       case "processing":
-        return <Processing label={screen.label} onCancel={() => setScreen({ name: "capture" })} />;
+        return (
+          <Processing
+            previewUrl={screen.previewUrl}
+            mediaType={screen.mediaType}
+            transcript={screen.transcript}
+            onCancel={handleCancelProcessing}
+          />
+        );
       case "review":
         return (
           <Review events={screen.events} onAdd={handleAdd} onRestart={() => setScreen({ name: "capture" })} />
@@ -179,6 +279,11 @@ function buildInstructions(generalInstructions: string | undefined, oneTimeInstr
 
   const existingLines = general.split(/\r?\n/).map((line) => line.trim());
   return existingLines.includes(oneTime) ? general : `${general}\n${oneTime}`;
+}
+
+function mediaTypeFor(file: File): string {
+  if (file.type) return file.type;
+  return file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg";
 }
 
 function classifyError(err: unknown, providerLabel: string): Screen {

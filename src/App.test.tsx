@@ -2,11 +2,17 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
+import type { CalendarEvent } from "./lib/schema";
+import type { TranscriptChunk } from "./lib/transcript";
+
+vi.setConfig({ testTimeout: 20_000 });
 
 const mocks = vi.hoisted(() => ({
   getAiSettings: vi.fn(),
   setAiSettings: vi.fn(),
-  extractEvents: vi.fn(),
+  streamExtraction: vi.fn(),
+  imagePreviewUrl: vi.fn(),
+  renderPdfFirstPage: vi.fn(),
   openExternal: vi.fn(),
 }));
 
@@ -18,30 +24,46 @@ vi.mock("./lib/store", async () => {
     setAiSettings: mocks.setAiSettings,
   };
 });
-vi.mock("./lib/ai", () => ({ extractEvents: mocks.extractEvents }));
+vi.mock("./lib/ai", () => ({ streamExtraction: mocks.streamExtraction }));
+vi.mock("./lib/pdfPreview", () => ({
+  imagePreviewUrl: mocks.imagePreviewUrl,
+  renderPdfFirstPage: mocks.renderPdfFirstPage,
+}));
 vi.mock("./lib/platform", () => ({
   isTauri: () => false,
   aiFetch: fetch,
   openExternal: mocks.openExternal,
 }));
 
+function boardMeetingEvent(): CalendarEvent {
+  return {
+    title: "Board meeting",
+    start: "2026-06-10T09:00:00",
+    end: null,
+    allDay: false,
+    location: null,
+    description: null,
+    timezone: null,
+    confidence: 0.9,
+  };
+}
+
+function mockStreamEvents(events: CalendarEvent[], extraChunks: TranscriptChunk[] = []) {
+  mocks.streamExtraction.mockImplementation(async function* () {
+    yield { kind: "status", text: "Reading the capture." };
+    for (const chunk of extraChunks) yield chunk;
+    yield { kind: "done", events };
+  });
+}
+
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getAiSettings.mockResolvedValue({ selectedProvider: "gemini", providers: {} });
     mocks.setAiSettings.mockResolvedValue(undefined);
-    mocks.extractEvents.mockResolvedValue([
-      {
-        title: "Board meeting",
-        start: "2026-06-10T09:00:00",
-        end: null,
-        allDay: false,
-        location: null,
-        description: null,
-        timezone: null,
-        confidence: 0.9,
-      },
-    ]);
+    mocks.imagePreviewUrl.mockReturnValue("blob:preview");
+    mocks.renderPdfFirstPage.mockResolvedValue("data:image/png;base64,pdf-preview");
+    mockStreamEvents([boardMeetingEvent()]);
   });
 
   it("starts in settings without a saved key", async () => {
@@ -75,10 +97,12 @@ describe("App", () => {
     await user.upload(upload, new File(["%PDF"], "event.pdf", { type: "application/pdf" }));
 
     await waitFor(() =>
-      expect(mocks.extractEvents).toHaveBeenCalledWith(
+      expect(mocks.streamExtraction).toHaveBeenCalledWith(
         expect.objectContaining({ provider: "openai", mediaType: "application/pdf" }),
+        expect.any(AbortSignal),
       ),
     );
+    expect(mocks.renderPdfFirstPage).toHaveBeenCalledWith(expect.any(Uint8Array));
     expect(await screen.findByDisplayValue("Board meeting")).toBeInTheDocument();
   });
 
@@ -97,8 +121,9 @@ describe("App", () => {
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
 
     await waitFor(() =>
-      expect(mocks.extractEvents).toHaveBeenCalledWith(
+      expect(mocks.streamExtraction).toHaveBeenCalledWith(
         expect.objectContaining({ instructions: "Assume Europe/Berlin." }),
+        expect.any(AbortSignal),
       ),
     );
   });
@@ -126,12 +151,18 @@ describe("App", () => {
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
 
     await waitFor(() =>
-      expect(mocks.extractEvents).toHaveBeenCalledWith(
+      expect(mocks.streamExtraction).toHaveBeenCalledWith(
         expect.objectContaining({
           instructions: "Assume Europe/Berlin.\nOnly include the highlighted row.",
         }),
+        expect.any(AbortSignal),
       ),
     );
+    expect(await screen.findByDisplayValue("Board meeting")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /new capture/i }));
+    expect(await screen.findByRole("button", { name: /take photo/i })).toBeInTheDocument();
+    expect(screen.queryByText("Only include the highlighted row.")).not.toBeInTheDocument();
   });
 
   it("saves a scan note to general instructions when requested", async () => {
@@ -175,8 +206,73 @@ describe("App", () => {
     const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
 
-    await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalledWith(expect.objectContaining({ provider: "openrouter" })));
+    await waitFor(() =>
+      expect(mocks.streamExtraction).toHaveBeenCalledWith(
+        expect.objectContaining({ provider: "openrouter" }),
+        expect.any(AbortSignal),
+      ),
+    );
     expect(await screen.findByDisplayValue("Board meeting")).toBeInTheDocument();
+  });
+
+  it("shows the preview and streamed transcript while extraction runs", async () => {
+    const user = userEvent.setup();
+    let finishStream: () => void = () => undefined;
+    const waitForFinish = new Promise<void>((resolve) => {
+      finishStream = resolve;
+    });
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openai",
+      providers: { openai: { apiKey: "sk-test", model: "gpt-4.1" } },
+    });
+    mocks.streamExtraction.mockImplementation(async function* () {
+      yield { kind: "status", text: "Reading the capture." };
+      yield { kind: "found", text: "Found event: Board meeting" };
+      await waitForFinish;
+      yield { kind: "done", events: [boardMeetingEvent()] };
+    });
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    expect(await screen.findByTestId("riso-thumb")).toHaveAccessibleName("Processing image capture");
+    expect(screen.getByTestId("processing-label")).toHaveTextContent("Agent is working");
+    const transcript = await screen.findByTestId("agent-transcript");
+    expect(transcript).toHaveTextContent("status / Reading the capture.");
+    expect(transcript).toHaveTextContent("found / Found event: Board meeting");
+    expect(mocks.imagePreviewUrl).toHaveBeenCalledWith(expect.any(File));
+
+    finishStream();
+    expect(await screen.findByDisplayValue("Board meeting")).toBeInTheDocument();
+  });
+
+  it("aborts the active stream when processing is cancelled", async () => {
+    const user = userEvent.setup();
+    let capturedSignal: AbortSignal | undefined;
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openai",
+      providers: { openai: { apiKey: "sk-test", model: "gpt-4.1" } },
+    });
+    mocks.streamExtraction.mockImplementation(async function* (_input: unknown, signal?: AbortSignal) {
+      capturedSignal = signal;
+      yield { kind: "status", text: "Reading the capture." };
+      await new Promise<void>(() => undefined);
+    });
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    expect(await screen.findByTestId("agent-transcript")).toHaveTextContent("status / Reading the capture.");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(capturedSignal?.aborted).toBe(true);
+    expect(await screen.findByRole("button", { name: /take photo/i })).toBeInTheDocument();
   });
 
   it("opens Google Calendar immediately when exactly one event is extracted", async () => {
@@ -214,7 +310,7 @@ describe("App", () => {
       selectedProvider: "openrouter",
       providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
     });
-    mocks.extractEvents.mockResolvedValue([
+    mockStreamEvents([
       { title: "Standup", start: "2026-06-10T09:00:00", end: "2026-06-10T09:30:00", allDay: false, location: null, description: null, timezone: null, confidence: 0.9 },
       { title: "Lunch", start: "2026-06-10T12:00:00", end: "2026-06-10T13:00:00", allDay: false, location: null, description: null, timezone: null, confidence: 0.8 },
     ]);
@@ -242,7 +338,7 @@ describe("App", () => {
     const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
 
-    await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.streamExtraction).toHaveBeenCalled());
     const card = await screen.findByTestId("riso-event-card");
     expect(card).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: /review event/i })).toBeInTheDocument();
@@ -261,7 +357,7 @@ describe("App", () => {
     const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
 
-    await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.streamExtraction).toHaveBeenCalled());
     await screen.findByTestId("riso-event-card");
 
     await user.click(screen.getByRole("button", { name: /new capture/i }));
@@ -281,7 +377,7 @@ describe("App", () => {
     const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
 
-    await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.streamExtraction).toHaveBeenCalled());
     const addBtn = await screen.findByRole("button", { name: /add to google calendar/i });
     await user.click(addBtn);
 
@@ -302,7 +398,7 @@ describe("App", () => {
     const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
 
-    await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.streamExtraction).toHaveBeenCalled());
     const addBtn = await screen.findByRole("button", { name: /add to google calendar/i });
     await user.click(addBtn);
 
@@ -318,7 +414,7 @@ describe("App", () => {
       selectedProvider: "openrouter",
       providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
     });
-    mocks.extractEvents.mockResolvedValue([
+    mockStreamEvents([
       { title: "Standup", start: "2026-06-10T09:00:00", end: null, allDay: false, location: null, description: null, timezone: null, confidence: 0.9 },
       { title: "Lunch", start: "2026-06-10T12:00:00", end: null, allDay: false, location: null, description: null, timezone: null, confidence: 0.8 },
     ]);
@@ -345,7 +441,7 @@ describe("App", () => {
       providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
     });
     // Use two events so auto-open does not fire (auto-open only fires for exactly one event)
-    mocks.extractEvents.mockResolvedValue([
+    mockStreamEvents([
       { title: "Standup", start: "2026-06-10T09:00:00", end: null, allDay: false, location: null, description: null, timezone: null, confidence: 0.9 },
       { title: "Lunch", start: "2026-06-10T12:00:00", end: null, allDay: false, location: null, description: null, timezone: null, confidence: 0.8 },
     ]);
@@ -356,7 +452,7 @@ describe("App", () => {
     const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
 
-    await waitFor(() => expect(mocks.extractEvents).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.streamExtraction).toHaveBeenCalled());
     const addBtns = await screen.findAllByRole("button", { name: /add to google calendar/i });
     expect(addBtns[0]).toBeInTheDocument();
 

@@ -1,47 +1,70 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
+import type { TranscriptChunk } from "../lib/transcript";
 import { Processing } from "./Processing";
 
+const transcript: TranscriptChunk[] = [
+  { kind: "status", text: "Preparing the capture for extraction." },
+  { kind: "thinking", text: "Checking the poster date." },
+  { kind: "found", text: "Found event: Board meeting" },
+];
+
+function renderProcessing(overrides: Partial<ComponentProps<typeof Processing>> = {}) {
+  return render(
+    <Processing
+      previewUrl="blob:preview"
+      mediaType="image/png"
+      transcript={transcript}
+      onCancel={vi.fn()}
+      {...overrides}
+    />,
+  );
+}
+
 describe("Processing", () => {
-  it("renders label text", () => {
-    render(<Processing label="Reading your photo…" onCancel={vi.fn()} />);
-    expect(screen.getByTestId("processing-label")).toHaveTextContent("Reading your photo…");
+  it("renders the agent working header", () => {
+    renderProcessing();
+    expect(screen.getByTestId("processing-label")).toHaveTextContent("Agent is working");
   });
 
-  it("renders riso skeleton rows", () => {
-    render(<Processing label="Reading your photo…" onCancel={vi.fn()} />);
-    const skels = screen.getAllByTestId("riso-skel");
-    expect(skels).toHaveLength(4);
+  it("renders transcript lines for streamed chunks", () => {
+    renderProcessing();
+    const log = screen.getByTestId("agent-transcript");
+    expect(log).toHaveTextContent("status / Preparing the capture for extraction.");
+    expect(log).toHaveTextContent("thinking / Checking the poster date.");
+    expect(log).toHaveTextContent("found / Found event: Board meeting");
+    expect(log).toHaveAttribute("aria-busy", "true");
   });
 
-  it("renders the halftone thumbnail", () => {
-    render(<Processing label="Reading your photo…" onCancel={vi.fn()} />);
-    expect(screen.getByTestId("riso-thumb")).toBeInTheDocument();
+  it("renders the preview in the shared frame", () => {
+    renderProcessing({ mediaType: "application/pdf", previewUrl: "data:image/png;base64,preview" });
+    const frame = screen.getByTestId("riso-thumb");
+    expect(frame).toHaveClass("flex-1");
+    expect(frame).toHaveClass("border-2");
+    expect(frame).toHaveAccessibleName("Processing PDF capture");
+    expect(screen.getByTestId("processing-preview")).toHaveStyle({
+      backgroundImage: 'url("data:image/png;base64,preview")',
+    });
   });
 
   it("renders the scan sweep element", () => {
-    render(<Processing label="Reading your photo…" onCancel={vi.fn()} />);
+    renderProcessing();
     expect(screen.getByTestId("riso-scan")).toBeInTheDocument();
   });
 
   it("calls onCancel when Cancel is clicked", async () => {
     const user = userEvent.setup();
     const onCancel = vi.fn();
-    render(<Processing label="Reading your photo…" onCancel={onCancel} />);
+    renderProcessing({ onCancel });
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
   it("Cancel button has sufficient touch target (min-h-44px class)", () => {
-    render(<Processing label="Reading your photo…" onCancel={vi.fn()} />);
+    renderProcessing();
     const btn = screen.getByRole("button", { name: "Cancel" });
     expect(btn.className).toContain("min-h-[44px]");
-  });
-
-  it("skeleton container has aria-busy", () => {
-    render(<Processing label="Reading your photo…" onCancel={vi.fn()} />);
-    const busy = screen.getByLabelText("Extracting event data");
-    expect(busy).toHaveAttribute("aria-busy", "true");
   });
 });
