@@ -9,7 +9,7 @@ export function CaptureFrame({ children, className = "", ...rest }: CaptureFrame
   return (
     <div
       className={[
-        "flex-1 overflow-hidden rounded-[18px] border-2 border-ink bg-paper-2 relative",
+        "relative h-[clamp(300px,62dvh,560px)] flex-none overflow-hidden rounded-[18px] border-2 border-ink bg-paper-2",
         className,
       ]
         .filter(Boolean)

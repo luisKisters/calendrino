@@ -24,11 +24,16 @@ async function gotoAuthError(page: import("@playwright/test").Page) {
   await expect(page.getByRole("button", { name: /take photo/i })).toBeVisible();
 
   const input = page.locator('input[type="file"]').first();
+  const extractionResponse = page.waitForResponse((response) =>
+    response.url().includes("/api/extract-stream") && response.status() === 401,
+  );
   await input.setInputFiles({
     name: "test.jpg",
     mimeType: "image/jpeg",
     buffer: Buffer.from("fake-image-data"),
   });
+  await extractionResponse;
+  await expect(page.getByTestId("riso-error")).toBeVisible();
 }
 
 test("error screen shows riso error panel with retry and settings buttons", async ({ page }) => {

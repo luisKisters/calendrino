@@ -220,40 +220,25 @@ export async function* streamExtractionDirect(input: DirectExtractInput): AsyncI
       abortSignal: input.abortSignal,
       messages: [{ role: "user", content: userContentFor(media) }],
     });
+    const finalObject = result.object;
+    void finalObject.catch(() => undefined);
     const seenTitles = new Set<string>();
-    let streamError: unknown;
 
-    for await (const part of result.fullStream) {
-      for (const chunk of chunksFromStreamPart(part, seenTitles)) {
+    for await (const partial of result.partialObjectStream) {
+      for (const chunk of foundChunksFromPartial(partial, seenTitles)) {
         yield chunk;
       }
-      if (isObjectWithType(part, "error")) {
-        streamError = part.error;
-        break;
-      }
     }
 
-    if (streamError) {
-      await result.object.catch(() => undefined);
-      yield { kind: "error", message: errorMessage(streamError) };
-      return;
-    }
-
-    const object = await result.object;
+    const object = await finalObject;
     yield { kind: "done", events: object.events };
   } catch (error) {
     yield { kind: "error", message: errorMessage(error) };
   }
 }
 
-function* chunksFromStreamPart(part: unknown, seenTitles: Set<string>): Generator<TranscriptChunk> {
-  const reasoning = reasoningTextFromPart(part);
-  if (reasoning) {
-    yield { kind: "thinking", text: reasoning };
-  }
-
-  if (!isObjectWithType(part, "object")) return;
-  for (const title of eventTitlesFromPartial(part.object)) {
+function* foundChunksFromPartial(partial: unknown, seenTitles: Set<string>): Generator<TranscriptChunk> {
+  for (const title of eventTitlesFromPartial(partial)) {
     if (seenTitles.has(title)) continue;
     seenTitles.add(title);
     yield { kind: "found", text: `Found event: ${title}` };
@@ -272,28 +257,6 @@ function* eventTitlesFromPartial(partial: unknown): Generator<string> {
     const trimmed = title.trim();
     if (trimmed) yield trimmed;
   }
-}
-
-function reasoningTextFromPart(part: unknown): string | undefined {
-  if (!part || typeof part !== "object" || !("type" in part)) return undefined;
-  const type = (part as { type?: unknown }).type;
-  if (type !== "reasoning-delta" && type !== "reasoning") return undefined;
-
-  const fields = part as { delta?: unknown; textDelta?: unknown; text?: unknown };
-  const text =
-    typeof fields.delta === "string"
-      ? fields.delta
-      : typeof fields.textDelta === "string"
-        ? fields.textDelta
-        : typeof fields.text === "string"
-          ? fields.text
-          : "";
-  const trimmed = text.trim();
-  return trimmed || undefined;
-}
-
-function isObjectWithType<T extends string>(value: unknown, type: T): value is { type: T; [key: string]: unknown } {
-  return !!value && typeof value === "object" && "type" in value && (value as { type?: unknown }).type === type;
 }
 
 function errorMessage(error: unknown): string {

@@ -37,8 +37,8 @@ pnpm tauri icon ./app-icon.png   # rebuilds src-tauri/icons/* from the 1024×102
    a one-time note can be added from the capture screen for the next scan only.
 3. **Extract** — the file and relevant instructions are sent to your selected AI
    provider via the Vercel AI SDK. The processing screen shows the captured image
-   or first PDF page while a streaming agent transcript reports status, model
-   reasoning when available, and detected event titles.
+   or first PDF page while a streaming agent transcript reports status and
+   detected event titles.
 4. **Confirm** — review/edit the detected event(s).
 5. **Add** — opens the Google Calendar "create event" form, pre-filled.
 
@@ -49,9 +49,20 @@ at `/api/extract-stream` so provider CORS does not block the streaming transcrip
 flow. The older `/api/extract` JSON endpoint remains for non-streaming callers and
 tests.
 
+## Browser API
+
+`POST /api/extract-stream` accepts the shared extraction payload: base64 media,
+media type, provider, API key, optional model, optional `instructions`, and the
+current date context. It responds as `application/x-ndjson`, with one transcript
+chunk per line: `status`, `found`, `done`, or `error`.
+
+`POST /api/extract` remains available for non-streaming JSON callers and returns
+the final validated events in one response.
+
 ## Quick start (desktop)
 
-Prerequisites: **Node 20+** and **Rust** (via [rustup](https://rustup.rs)).
+Prerequisites: **Node 22.13+ or 24+**, **pnpm 11**, and **Rust** (via
+[rustup](https://rustup.rs)).
 
 ```bash
 pnpm install
@@ -93,9 +104,11 @@ pnpm run test:all   # both — this is what CI runs
 Unit tests are fully mocked and always run. Alongside them,
 `src/test/integration/live.test.ts` runs **real** extraction against each
 provider — covering both the native (`extractEventsDirect`) and PWA
-(`/api/extract`) code paths — using a committed sample event as a PDF and a PNG
-(`src/test/fixtures/`, regenerate with `node scripts/make-fixtures.mjs`). A
-provider's live tests only run when its API key is in the environment
+(`/api/extract`) non-streaming JSON paths — using a committed sample event as a
+PDF and a PNG (`src/test/fixtures/`, regenerate with
+`node scripts/make-fixtures.mjs`). Streaming behavior is covered by mocked
+`streamObject`/NDJSON unit tests and Playwright stubs for `/api/extract-stream`.
+A provider's live tests only run when its API key is in the environment
 (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`,
 `DEEPSEEK_API_KEY`); otherwise they skip, and provider-side
 failures (no quota, bad key, model JSON-mode flakiness) skip rather than fail.
@@ -121,7 +134,7 @@ src/
     ai.ts         extractEvents()/streamExtraction() — Tauri direct calls or browser API proxy
     aiCore.ts     shared provider/model construction + AI SDK calls
     aiContract.ts shared extraction request/response contract
-    transcript.ts TranscriptChunk contract for streaming status/thinking/found/done/error chunks
+    transcript.ts TranscriptChunk contract for streaming status/found/done/error chunks
     pdfPreview.ts first-page PDF rendering + image preview URL helpers
     gcal.ts       buildGCalUrl() — Google Calendar prefill URL
     datetime.ts   local-time parsing/formatting helpers
@@ -141,10 +154,10 @@ docs/plans/       PRD, plan1 (V0), ideas (roadmap)
 Native mode is local-first. Your API key lives on-device (V0 uses the store
 plugin; hardening to the OS keychain is a planned follow-up), and captured files
 and custom instructions are sent only to the selected AI provider with your key.
-One-time scan notes are cleared after the scan finishes. In browser/PWA mode,
-your API key, captured file, and relevant instructions are sent transiently to
-the deployed Vercel Function, which forwards the extraction request and does not
-store them.
+One-time scan notes are cleared after the scan finishes or is cancelled. In
+browser/PWA mode, your API key, captured file, and relevant instructions are sent
+transiently to the deployed Vercel Function, which forwards the extraction
+request and does not store them.
 
 ## Provider defaults
 

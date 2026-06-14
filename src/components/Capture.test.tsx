@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -163,9 +163,18 @@ describe("Capture", () => {
     expect(getUserMedia).toHaveBeenCalledWith({
       video: { facingMode: "environment" },
     });
-    expect(await screen.findByTestId("camera-preview")).toBeInTheDocument();
+    const video = await screen.findByTestId("camera-preview");
+    const shutter = screen.getByRole("button", { name: /take photo/i });
+    expect(shutter).toBeDisabled();
 
-    await user.click(screen.getByRole("button", { name: /take photo/i }));
+    Object.defineProperty(video, "readyState", {
+      configurable: true,
+      value: 2,
+    });
+    fireEvent.canPlay(video);
+    await waitFor(() => expect(shutter).not.toBeDisabled());
+
+    await user.click(shutter);
 
     await waitFor(() => expect(onFile).toHaveBeenCalledWith(expect.any(File)));
     const captured = onFile.mock.calls[0][0] as File;
@@ -200,25 +209,25 @@ describe("Capture", () => {
     await waitFor(() => expect(stop).toHaveBeenCalledTimes(1));
   });
 
-  it("falls back to the native capture input when camera access stalls", async () => {
-    vi.useFakeTimers();
-    const getUserMedia = vi.fn(() => new Promise<MediaStream>(() => undefined));
+  it("falls back to the native capture input when camera access is denied", async () => {
+    const user = userEvent.setup();
+    const getUserMedia = vi.fn().mockRejectedValue(new DOMException("Denied", "NotAllowedError"));
     setMediaDevices({ getUserMedia } as unknown as MediaDevices);
 
-    render(<ControlledCapture />);
+    const { container } = render(<ControlledCapture />);
+    const nativeCaptureInput = container.querySelector(
+      'input[accept="image/*"][capture="environment"]',
+    ) as HTMLInputElement;
+    const clickNativeCapture = vi.spyOn(nativeCaptureInput, "click").mockImplementation(() => undefined);
 
-    fireEvent.click(screen.getByRole("button", { name: /take photo/i }));
-    expect(screen.getByRole("heading", { name: /starting camera/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /take photo/i }));
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2500);
-    });
-
-    expect(screen.getByTestId("camera-fallback-art")).toBeInTheDocument();
+    expect(await screen.findByTestId("camera-fallback-art")).toBeInTheDocument();
     expect(screen.getByText(/Snap or drop/)).toBeInTheDocument();
+    expect(clickNativeCapture).toHaveBeenCalledTimes(1);
   });
 
-  it("falls back to the native capture input when camera access is rejected", async () => {
+  it("continues opening the native capture input after camera access is rejected", async () => {
     const user = userEvent.setup();
     const getUserMedia = vi.fn().mockRejectedValue(new DOMException("Denied", "NotAllowedError"));
     setMediaDevices({ getUserMedia } as unknown as MediaDevices);
@@ -234,6 +243,45 @@ describe("Capture", () => {
     await waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(1));
     expect(screen.getByTestId("camera-fallback-art")).toBeInTheDocument();
     expect(screen.getByText(/Snap or drop/)).toBeInTheDocument();
+    expect(clickNativeCapture).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: /take photo/i }));
+
+    expect(clickNativeCapture).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens the native capture input on a fresh shutter click when the live frame cannot be captured", async () => {
+    const user = userEvent.setup();
+    const onFile = vi.fn();
+    const { stop } = mockCameraStream();
+
+    const { container } = render(<ControlledCapture onFile={onFile} />);
+    const nativeCaptureInput = container.querySelector(
+      'input[accept="image/*"][capture="environment"]',
+    ) as HTMLInputElement;
+    const clickNativeCapture = vi.spyOn(nativeCaptureInput, "click").mockImplementation(() => undefined);
+
+    await user.click(screen.getByRole("button", { name: /take photo/i }));
+    const video = await screen.findByTestId("camera-preview");
+    Object.defineProperty(video, "readyState", {
+      configurable: true,
+      value: 2,
+    });
+    fireEvent.canPlay(video);
+    await waitFor(() => expect(screen.getByRole("button", { name: /take photo/i })).not.toBeDisabled());
+
+    HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValueOnce({
+      drawImage: vi.fn(() => {
+        throw new Error("No frame available");
+      }),
+    });
+
+    await user.click(screen.getByRole("button", { name: /take photo/i }));
+
+    expect(await screen.findByTestId("camera-fallback-art")).toBeInTheDocument();
+    expect(onFile).not.toHaveBeenCalled();
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(clickNativeCapture).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: /take photo/i }));
 

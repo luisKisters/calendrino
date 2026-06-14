@@ -1,5 +1,7 @@
 # Calendrino — Live camera, custom instructions & agent-transcript processing
 
+Status: Completed 2026-06-14
+
 ## Overview
 
 Five connected upgrades to the (already restyled) Risograph app, all behaviour-aware:
@@ -12,8 +14,8 @@ Five connected upgrades to the (already restyled) Risograph app, all behaviour-a
    the capture screen and applied to the very next scan only ("clear after one use").
 3. **Agent-transcript processing screen** — replace the faux-flyer skeleton with the
    **actual captured image / PDF first page**, darkened, under an "Agent is working"
-   header and a **live streaming transcript** (hybrid: real model reasoning where the
-   provider exposes it, narrated `streamObject` progress everywhere else).
+   header and a **live streaming transcript** with narrated `streamObject` progress
+   and detected event titles.
 4. **Same-size frame** — the capture zone and the processing preview share one frame
    so the border width and dimensions never change across the swap.
 5. **Polish** — fix the broken gear icon; keep two primary buttons with the
@@ -44,13 +46,14 @@ narrow us to one provider). API-key-free testing uses `ai/test`
   - One provider abstraction: `aiCore.modelFor()` switches across anthropic/google/
     openai/openai-compatible (openrouter, wandb, deepseek); `callTuning()` pins
     determinism and minimises reasoning today.
-  - Web path posts to `/api/extract` (non-streaming JSON); Tauri calls
-    `extractEventsDirect` directly with the http-plugin `aiFetch`.
+  - Web path posts to `/api/extract-stream` for the UI (streaming NDJSON);
+    `/api/extract` remains as the non-streaming JSON endpoint; Tauri calls
+    `streamExtractionDirect` directly with the http-plugin `aiFetch`.
   - Settings persist via `store.ts` (Tauri store / localStorage), normalised in
     `normalizeSettings`.
 - New transcript contract (`src/lib/transcript.ts`):
-  - `type TranscriptChunk = {kind:"status",text} | {kind:"thinking",text} |
-    {kind:"found",text} | {kind:"done",events} | {kind:"error",message}`.
+  - `type TranscriptChunk = {kind:"status",text} | {kind:"found",text} |
+    {kind:"done",events} | {kind:"error",message}`.
 - Dependencies:
   - **Add `pdfjs-dist`** (PDF first-page render); lazy-imported, Vite `?url` worker.
   - `ai/test` (already available via `ai`) for key-free mocks.
@@ -75,7 +78,7 @@ narrow us to one provider). API-key-free testing uses `ai/test`
   - `pnpm run test` — Vitest unit tests.
   - `pnpm run test:e2e` — Playwright (chromium + mobile Pixel 7).
   - `pnpm run test:all` — full CI gate; must pass before completing a task.
-- **CI note** (per `CLAUDE.md`): new tests must run in CI — install Playwright
+- **CI note** (per `AGENTS.md`): new tests must run in CI — install Playwright
   browsers after dependency install and run `pnpm run test:all` before build steps;
   the new `pdfjs-dist` dependency is installed in the same install step.
 - **Browser-verify gate** (any UI-changing task): ensure the dev server is up
@@ -208,13 +211,10 @@ narrow us to one provider). API-key-free testing uses `ai/test`
 - [x] `aiCore.ts`: add `streamExtractionDirect(input): AsyncIterable<TranscriptChunk>`
       using `streamObject({ model, schema: EventsSchema, system, messages, ...callTuning })`:
       emit scripted `status` lines first; derive `found` chunks from `partialObjectStream`
-      as new event titles appear; forward reasoning stream parts (via `fullStream`) as
-      `thinking` chunks **where the model emits them**; emit `done` with resolved
-      `object.events`, or `error`. Keep `extractEventsDirect` for the non-stream path.
-      (Hybrid note: narration is the always-on backbone; for anthropic/gemini/deepseek
-      evaluate a light thinking budget — if it destabilises structured streaming for a
-      provider, keep narration-only there. Verify `streamObject` reasoning-part support
-      via ctx7 during build.)
+      as new event titles appear; emit `done` with resolved `object.events`, or `error`.
+      Keep `extractEventsDirect` for the non-stream path. The installed AI SDK exposes
+      reasoning deltas on `streamText`, not typed `streamObject` streams, so this
+      implementation keeps the structured object stream narration-only.
 - [x] `api/extract-stream.ts`: validate with `ExtractRequestPayloadSchema`, run
       `streamExtractionDirect`, `res.write(JSON.stringify(chunk)+"\n")` per chunk (NDJSON),
       `res.end()`; reuse `decodeMedia`/size limits from `api/extract.ts`; emit an `error`
@@ -256,7 +256,7 @@ narrow us to one provider). API-key-free testing uses `ai/test`
       `previewUrl` as an `object-cover` background, dark multiply + teal overlay +
       halftone (keep the riso scan sweep, reduced-motion aware); overlay an
       "Agent is working" header (riso sparkle) and a scrolling monospace transcript that
-      appends `status`/`thinking`/`found` lines (auto-scroll). Keep
+      appends `status`/`found` lines (auto-scroll). Keep
       `data-testid="riso-thumb"`; add `data-testid="agent-transcript"`. Cancel → abort.
 - [x] `App.tsx`: `processing` state carries `previewUrl`, `mediaType`, and live
       `transcript`. `handleFile` computes the preview (image vs `renderPdfFirstPage`),
@@ -277,7 +277,7 @@ narrow us to one provider). API-key-free testing uses `ai/test`
 ### Task 9: Acceptance criteria + documentation
 
 **Files:**
-- Modify: `README.md`, `CLAUDE.md` (none functional)
+- Modify: `README.md`, `AGENTS.md` (effective CLAUDE.md instructions; none functional)
 
 - [x] Run `pnpm run test:all` (chromium + mobile) and `pnpm run build` — all green.
 - [x] Confirm: live camera + fallback works; one-time note clears after one use and the
@@ -286,6 +286,6 @@ narrow us to one provider). API-key-free testing uses `ai/test`
       icon is clean; both privacy sentences are gone; no emoji icons; reduced-motion
       disables stream/scan animations; touch targets ≥44px.
 - [x] agent-browser walk: capture → (note sheet) → processing → review → settings.
-- [x] Update `README.md` (custom instructions, live camera) and `CLAUDE.md` (streaming
+- [x] Update `README.md` (custom instructions, live camera) and `AGENTS.md` (streaming
       endpoint `api/extract-stream`, `TranscriptChunk` contract, `ai/test` mocks,
       `pdfPreview`, `CaptureFrame`/`Sheet` primitives).

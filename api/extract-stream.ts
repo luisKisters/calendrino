@@ -38,15 +38,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
+  const bytes = decodeMedia(parsed.data.mediaBase64);
+  if (bytes.byteLength > MAX_MEDIA_BYTES) {
+    writeError(res, 413, "Uploaded file is too large.");
+    return;
+  }
+
   writeHeaders(res, 200);
-
+  const disconnect = disconnectSignal(req, res);
   try {
-    const bytes = decodeMedia(parsed.data.mediaBase64);
-    if (bytes.byteLength > MAX_MEDIA_BYTES) {
-      writeChunk(res, { kind: "error", message: "Uploaded file is too large." });
-      return;
-    }
-
     for await (const chunk of streamExtractionDirect({
       bytes,
       mediaType: parsed.data.mediaType,
@@ -56,6 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       instructions: parsed.data.instructions,
       now: parsed.data.now,
       fetch: globalThis.fetch.bind(globalThis),
+      abortSignal: disconnect.signal,
     })) {
       writeChunk(res, chunk);
     }
@@ -63,6 +64,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const message = error instanceof Error ? error.message : "AI extraction failed.";
     writeChunk(res, { kind: "error", message });
   } finally {
+    disconnect.cleanup();
     res.end();
   }
+}
+
+function disconnectSignal(req: VercelRequest, res: VercelResponse): { signal: AbortSignal; cleanup: () => void } {
+  const abortController = new AbortController();
+  const abort = () => abortController.abort();
+  req.on("aborted", abort);
+  res.on("close", abort);
+  return {
+    signal: abortController.signal,
+    cleanup: () => {
+      req.off("aborted", abort);
+      res.off("close", abort);
+    },
+  };
 }

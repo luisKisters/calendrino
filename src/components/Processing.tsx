@@ -25,7 +25,7 @@ export function Processing({ previewUrl, mediaType, transcript, onCancel }: Proc
     <div className="flex flex-1 flex-col gap-3 px-4 pb-4 pt-3">
       <CaptureFrame
         data-testid="riso-thumb"
-        className="isolate min-h-[360px]"
+        className="isolate"
         aria-label={`Processing ${mediaLabel} capture`}
       >
         <div className="absolute inset-0">
@@ -86,8 +86,6 @@ function transcriptLines(chunks: TranscriptChunk[]): string[] {
     switch (chunk.kind) {
       case "status":
         return [`status / ${chunk.text}`];
-      case "thinking":
-        return [`thinking / ${chunk.text}`];
       case "found":
         return [`found / ${chunk.text}`];
       case "done":

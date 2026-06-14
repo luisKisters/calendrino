@@ -65,28 +65,29 @@ const baseInput = {
 describe("streamExtractionDirect", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.streamObject.mockReset();
     mocks.isTauri.mockReturnValue(false);
   });
 
-  it("emits scripted status, found, thinking, and done chunks in order", async () => {
+  it("emits scripted status, found, and done chunks in order", async () => {
+    const signal = new AbortController().signal;
     mocks.streamObject.mockReturnValue({
-      fullStream: streamFrom([
-        { type: "object", object: { events: [{ title: "Dinner" }] } },
-        { type: "reasoning-delta", delta: "Checking the timezone." },
-        { type: "object", object: { events: [{ title: "Dinner" }, { title: "Dentist" }] } },
-        { type: "finish", finishReason: "stop", usage: {}, response: {} },
+      partialObjectStream: streamFrom([
+        { events: [{ title: "Dinner" }] },
+        { events: [{ title: "Dinner" }, { title: "Dentist" }] },
       ]),
       object: Promise.resolve({ events: [dinner, dentist] }),
     });
 
-    const chunks = await collect(streamExtractionDirect({ ...baseInput, instructions: "Prefer German titles." }));
+    const chunks = await collect(
+      streamExtractionDirect({ ...baseInput, instructions: "Prefer German titles.", abortSignal: signal }),
+    );
 
     expect(chunks.map((chunk) => chunk.kind)).toEqual([
       "status",
       "status",
       "status",
       "found",
-      "thinking",
       "found",
       "done",
     ]);
@@ -94,20 +95,74 @@ describe("streamExtractionDirect", () => {
       "Found event: Dinner",
       "Found event: Dentist",
     ]);
-    expect(chunks).toContainEqual({ kind: "thinking", text: "Checking the timezone." });
     expect(chunks[chunks.length - 1]).toEqual({ kind: "done", events: [dinner, dentist] });
     expect(mocks.streamObject).toHaveBeenCalledWith(
       expect.objectContaining({
+        abortSignal: signal,
         system: expect.stringContaining("Prefer German titles."),
         messages: expect.arrayContaining([expect.objectContaining({ role: "user" })]),
       }),
     );
+  });
+
+  it("emits an error chunk when the object stream fails", async () => {
+    mocks.streamObject.mockReturnValue({
+      partialObjectStream: failingStream(new Error("Provider stream failed.")),
+      object: Promise.resolve({ events: [] }),
+    });
+
+    const chunks = await collect(streamExtractionDirect(baseInput));
+
+    expect(chunks[chunks.length - 1]).toEqual({ kind: "error", message: "Provider stream failed." });
+  });
+
+  it("observes the final object promise when the partial stream fails first", async () => {
+    let rejectObject: ((error: Error) => void) | undefined;
+    const finalObject = new Promise<{ events: CalendarEvent[] }>((_resolve, reject) => {
+      rejectObject = reject;
+    });
+    const catchSpy = vi.spyOn(finalObject, "catch");
+    mocks.streamObject.mockReturnValue({
+      partialObjectStream: rejectObjectAndFailStream(
+        () => rejectObject?.(new Error("Final object failed.")),
+        new Error("Provider stream failed."),
+      ),
+      object: finalObject,
+    });
+
+    const chunks = await collect(streamExtractionDirect(baseInput));
+
+    expect(catchSpy).toHaveBeenCalledTimes(1);
+    expect(chunks[chunks.length - 1]).toEqual({ kind: "error", message: "Provider stream failed." });
+  });
+
+  it("emits an error chunk when final object validation fails", async () => {
+    mocks.streamObject.mockReturnValue({
+      partialObjectStream: streamFrom([{ events: [{ title: "Dinner" }] }]),
+      object: Promise.reject(new Error("Invalid object.")),
+    });
+
+    const chunks = await collect(streamExtractionDirect(baseInput));
+
+    expect(chunks).toContainEqual({ kind: "found", text: "Found event: Dinner" });
+    expect(chunks[chunks.length - 1]).toEqual({ kind: "error", message: "Invalid object." });
+  });
+
+  it("rejects unsupported media before starting the provider stream", async () => {
+    const chunks = await collect(streamExtractionDirect({ ...baseInput, provider: "deepseek" }));
+
+    expect(mocks.streamObject).not.toHaveBeenCalled();
+    expect(chunks[chunks.length - 1]).toEqual({
+      kind: "error",
+      message: "DeepSeek does not support images in Calendrino yet.",
+    });
   });
 });
 
 describe("streamExtraction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.streamObject.mockReset();
     mocks.isTauri.mockReturnValue(false);
   });
 
@@ -150,6 +205,40 @@ describe("streamExtraction", () => {
 
     expect(chunks).toEqual([{ kind: "status", text: "Preparing" }]);
   });
+
+  it("throws a useful error when the stream response has no body", async () => {
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 }));
+
+    await expect(collect(streamExtraction(baseInput))).rejects.toThrow("AI extraction failed with HTTP 500.");
+  });
+
+  it("yields NDJSON error chunks from non-OK responses", async () => {
+    const encoder = new TextEncoder();
+    globalThis.fetch = vi.fn(async () => new Response(
+      streamFrom([encoder.encode('{"kind":"error","message":"Invalid API key."}\n')]),
+      { status: 401 },
+    ));
+
+    await expect(collect(streamExtraction(baseInput))).resolves.toEqual([
+      { kind: "error", message: "Invalid API key." },
+    ]);
+  });
+
+  it("rejects malformed NDJSON", async () => {
+    const encoder = new TextEncoder();
+    globalThis.fetch = vi.fn(async () => new Response(streamFrom([encoder.encode("{not-json}\n")])));
+
+    await expect(collect(streamExtraction(baseInput))).rejects.toThrow();
+  });
+
+  it("rejects schema-invalid transcript chunks", async () => {
+    const encoder = new TextEncoder();
+    globalThis.fetch = vi.fn(async () => new Response(
+      streamFrom([encoder.encode('{"kind":"thinking","text":"Unsupported"}\n')]),
+    ));
+
+    await expect(collect(streamExtraction(baseInput))).rejects.toThrow();
+  });
 });
 
 async function collect<T>(iterable: AsyncIterable<T>): Promise<T[]> {
@@ -160,4 +249,13 @@ async function collect<T>(iterable: AsyncIterable<T>): Promise<T[]> {
 
 function streamFrom<T>(chunks: T[]): ReadableStream<T> {
   return simulateReadableStream({ chunks, initialDelayInMs: null, chunkDelayInMs: null });
+}
+
+async function* failingStream(error: Error): AsyncIterable<unknown> {
+  throw error;
+}
+
+async function* rejectObjectAndFailStream(rejectObject: () => void, error: Error): AsyncIterable<unknown> {
+  rejectObject();
+  throw error;
 }

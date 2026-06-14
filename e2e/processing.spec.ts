@@ -83,8 +83,8 @@ async function gotoProcessing(page: import("@playwright/test").Page) {
   await page.goto("/");
   await expect(page.getByRole("button", { name: /take photo/i })).toBeVisible();
 
-  // Trigger the upload path via the file input
-  const input = page.locator('input[type="file"]').first();
+  // Trigger the upload path via the file input.
+  const input = page.locator('input[accept="image/*,application/pdf"]');
   await input.setInputFiles({
     name: "test.jpg",
     mimeType: "image/jpeg",

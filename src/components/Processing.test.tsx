@@ -7,7 +7,6 @@ import { Processing } from "./Processing";
 
 const transcript: TranscriptChunk[] = [
   { kind: "status", text: "Preparing the capture for extraction." },
-  { kind: "thinking", text: "Checking the poster date." },
   { kind: "found", text: "Found event: Board meeting" },
 ];
 
@@ -33,7 +32,6 @@ describe("Processing", () => {
     renderProcessing();
     const log = screen.getByTestId("agent-transcript");
     expect(log).toHaveTextContent("status / Preparing the capture for extraction.");
-    expect(log).toHaveTextContent("thinking / Checking the poster date.");
     expect(log).toHaveTextContent("found / Found event: Board meeting");
     expect(log).toHaveAttribute("aria-busy", "true");
   });
@@ -41,7 +39,8 @@ describe("Processing", () => {
   it("renders the preview in the shared frame", () => {
     renderProcessing({ mediaType: "application/pdf", previewUrl: "data:image/png;base64,preview" });
     const frame = screen.getByTestId("riso-thumb");
-    expect(frame).toHaveClass("flex-1");
+    expect(frame.className).toContain("h-[clamp(300px,62dvh,560px)]");
+    expect(frame.className).not.toContain("min-h-[360px]");
     expect(frame).toHaveClass("border-2");
     expect(frame).toHaveAccessibleName("Processing PDF capture");
     expect(screen.getByTestId("processing-preview")).toHaveStyle({

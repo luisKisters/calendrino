@@ -35,8 +35,12 @@ test("capture screen falls back to native capture when camera is unavailable", a
         providers: { openai: { apiKey: "sk-test", model: "gpt-4.1" } },
       }),
     );
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: undefined,
+    });
   });
-  await page.goto("/?camera=unavailable");
+  await page.goto("/");
 
   await expect(page.getByRole("heading", { name: /snap or drop anything/i })).toBeVisible();
   await expect(page.locator('input[accept="image/*"][capture="environment"]')).toHaveCount(1);

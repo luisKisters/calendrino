@@ -26,10 +26,14 @@ All reusable riso UI lives in `src/components/riso/`:
 
 ### Extraction and streaming
 - `api/extract-stream.ts` is the browser/PWA streaming endpoint. It validates the shared `ExtractRequestPayloadSchema`, reuses the media decoding and size limits from `api/extract.ts`, runs `streamExtractionDirect`, and writes one JSON object per line as `application/x-ndjson`.
-- `src/lib/transcript.ts` owns the `TranscriptChunk` contract: `status`, `thinking`, `found`, `done`, and `error`. Client code must parse chunks with `parseTranscriptChunk` or the NDJSON parser in `src/lib/ai.ts`.
-- `streamExtractionDirect` in `src/lib/aiCore.ts` uses the Vercel AI SDK `streamObject` API. Scripted `status` chunks are always emitted; `thinking` chunks are forwarded only when the provider/model exposes reasoning parts; `found` chunks are derived from streamed partial event titles; `done` carries the final validated events.
+- `src/lib/transcript.ts` owns the `TranscriptChunk` contract: `status`, `found`, `done`, and `error`. Client code must parse chunks with `parseTranscriptChunk` or the NDJSON parser in `src/lib/ai.ts`.
+- `streamExtractionDirect` in `src/lib/aiCore.ts` uses the Vercel AI SDK `streamObject` API. Scripted `status` chunks are always emitted; `found` chunks are derived from `partialObjectStream` event titles; `done` carries the final validated events.
+- `AiSettings.customInstructions` is the persisted global instruction field. `App.tsx` combines it with the one-time capture note into request `instructions`; one-time notes clear when processing finishes, errors, or is cancelled. `systemPrompt` fences instructions as lower-priority user preferences.
 - Tests for streaming should stay API-key-free. Use `ai/test` helpers where available, or mock `streamObject` with readable streams as the existing tests do.
 - `src/lib/pdfPreview.ts` renders the first page of PDFs with `pdfjs-dist` and a Vite `?url` worker import. Images use `URL.createObjectURL`; revoke object URLs when the processing run finishes or is cancelled.
+
+### Testing workflow
+- Playwright e2e tests block service workers in `playwright.config.ts` so `/api/extract-stream` route/fetch stubs are deterministic. Keep that setting unless a test explicitly covers PWA service-worker behavior.
 
 ### No-emoji rule
 Never use emoji as icons. Every icon in `src/` must come from `<Icon name="..." />`

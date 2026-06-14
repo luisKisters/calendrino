@@ -238,7 +238,7 @@ export function Settings({ initialSettings, hasExistingKey, onSave, onClose }: S
       {/* Privacy footer */}
       <div className="mt-4 flex items-center gap-2 text-[11px] text-ink-soft">
         <Icon name="shield" size={14} className="text-teal" aria-hidden={true} />
-        Keys never leave your device
+        Stored locally; web scans proxy transiently
       </div>
     </div>
   );

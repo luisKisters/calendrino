@@ -67,6 +67,96 @@ describe("pdfPreview", () => {
     expect(destroy).toHaveBeenCalledTimes(1);
   });
 
+  it("caps preview rendering by page height for extreme aspect ratios", async () => {
+    const render = vi.fn(() => ({ promise: Promise.resolve() }));
+    const cleanup = vi.fn();
+    const destroy = vi.fn(async () => undefined);
+    const getPage = vi.fn(async () => ({
+      cleanup,
+      getViewport: vi.fn(({ scale }: { scale: number }) => ({
+        width: 600 * scale,
+        height: 100_000 * scale,
+      })),
+      render,
+    }));
+    mocks.getDocument.mockReturnValue({
+      destroy,
+      promise: Promise.resolve({ destroy, getPage }),
+    });
+
+    const dataUrl = await renderPdfFirstPage(new Uint8Array([1, 2, 3]));
+
+    expect(dataUrl).toMatch(/^data:image\/png;base64,/);
+    expect(render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        canvas: expect.objectContaining({ width: 10, height: 1_600 }),
+        viewport: expect.objectContaining({ width: 9.6, height: 1_600 }),
+      }),
+    );
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects invalid PDF page dimensions before rendering", async () => {
+    const render = vi.fn(() => ({ promise: Promise.resolve() }));
+    const cleanup = vi.fn();
+    const destroy = vi.fn(async () => undefined);
+    const getPage = vi.fn(async () => ({
+      cleanup,
+      getViewport: vi.fn(({ scale }: { scale: number }) => ({
+        width: Number.POSITIVE_INFINITY * scale,
+        height: 800 * scale,
+      })),
+      render,
+    }));
+    mocks.getDocument.mockReturnValue({
+      destroy,
+      promise: Promise.resolve({ destroy, getPage }),
+    });
+
+    await expect(renderPdfFirstPage(new Uint8Array([1, 2, 3]))).rejects.toThrow("invalid dimensions");
+
+    expect(render).not.toHaveBeenCalled();
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("destroys the loading task when the PDF fails to load", async () => {
+    const destroy = vi.fn(async () => undefined);
+    mocks.getDocument.mockReturnValue({
+      destroy,
+      promise: Promise.reject(new Error("Bad PDF")),
+    });
+    const bytes = new Uint8Array([1, 2, 3]);
+
+    await expect(renderPdfFirstPage(bytes)).rejects.toThrow("Bad PDF");
+
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("cleans up the page and destroys the loading task when rendering fails", async () => {
+    const cleanup = vi.fn();
+    const destroy = vi.fn(async () => undefined);
+    const getPage = vi.fn(async () => ({
+      cleanup,
+      getViewport: vi.fn(({ scale }: { scale: number }) => ({
+        width: 600 * scale,
+        height: 800 * scale,
+      })),
+      render: vi.fn(() => ({ promise: Promise.reject(new Error("Render failed")) })),
+    }));
+    mocks.getDocument.mockReturnValue({
+      destroy,
+      promise: Promise.resolve({ destroy, getPage }),
+    });
+    const bytes = new Uint8Array([1, 2, 3]);
+
+    await expect(renderPdfFirstPage(bytes)).rejects.toThrow("Render failed");
+
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
   it("creates an object URL for image files", () => {
     URL.createObjectURL = vi.fn(() => "blob:http://localhost/preview");
     const file = new File(["image"], "event.png", { type: "image/png" });

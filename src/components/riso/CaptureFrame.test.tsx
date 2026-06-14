@@ -26,10 +26,11 @@ describe("CaptureFrame", () => {
     expect(div.className).toContain("border-2");
   });
 
-  it("applies flex-1 and overflow-hidden", () => {
+  it("applies stable frame sizing and overflow-hidden", () => {
     const { container } = render(<CaptureFrame>content</CaptureFrame>);
     const div = container.firstChild as HTMLElement;
-    expect(div.className).toContain("flex-1");
+    expect(div.className).toContain("h-[clamp(300px,62dvh,560px)]");
+    expect(div.className).toContain("flex-none");
     expect(div.className).toContain("overflow-hidden");
   });
 

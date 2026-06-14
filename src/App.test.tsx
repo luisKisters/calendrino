@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import type { CalendarEvent } from "./lib/schema";
 import type { TranscriptChunk } from "./lib/transcript";
@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   renderPdfFirstPage: vi.fn(),
   openExternal: vi.fn(),
 }));
+
+const originalRevokeObjectURL = URL.revokeObjectURL;
 
 vi.mock("./lib/store", async () => {
   const actual = await vi.importActual<typeof import("./lib/store")>("./lib/store");
@@ -56,14 +58,33 @@ function mockStreamEvents(events: CalendarEvent[], extraChunks: TranscriptChunk[
   });
 }
 
+function deferred<T = void>() {
+  let resolve!: (value?: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((next) => {
+    resolve = next as (value?: T | PromiseLike<T>) => void;
+  });
+  return { promise, resolve };
+}
+
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: vi.fn(),
+    });
     mocks.getAiSettings.mockResolvedValue({ selectedProvider: "gemini", providers: {} });
     mocks.setAiSettings.mockResolvedValue(undefined);
     mocks.imagePreviewUrl.mockReturnValue("blob:preview");
     mocks.renderPdfFirstPage.mockResolvedValue("data:image/png;base64,pdf-preview");
     mockStreamEvents([boardMeetingEvent()]);
+  });
+
+  afterEach(() => {
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: originalRevokeObjectURL,
+    });
   });
 
   it("starts in settings without a saved key", async () => {
@@ -104,6 +125,31 @@ describe("App", () => {
     );
     expect(mocks.renderPdfFirstPage).toHaveBeenCalledWith(expect.any(Uint8Array));
     expect(await screen.findByDisplayValue("Board meeting")).toBeInTheDocument();
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+  });
+
+  it("continues extracting PDFs when preview rendering fails", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openai",
+      providers: { openai: { apiKey: "sk-test", model: "gpt-4.1" } },
+    });
+    mocks.renderPdfFirstPage.mockRejectedValueOnce(new Error("Preview failed."));
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["%PDF"], "event.pdf", { type: "application/pdf" }));
+
+    await waitFor(() =>
+      expect(mocks.streamExtraction).toHaveBeenCalledWith(
+        expect.objectContaining({ mediaType: "application/pdf" }),
+        expect.any(AbortSignal),
+      ),
+    );
+    expect(await screen.findByDisplayValue("Board meeting")).toBeInTheDocument();
+    expect(screen.queryByText("Preview failed.")).not.toBeInTheDocument();
   });
 
   it("forwards saved custom instructions to extraction", async () => {
@@ -247,11 +293,38 @@ describe("App", () => {
 
     finishStream();
     expect(await screen.findByDisplayValue("Board meeting")).toBeInTheDocument();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
+  });
+
+  it("revokes image preview object URLs when extraction errors", async () => {
+    const user = userEvent.setup();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openai",
+      providers: { openai: { apiKey: "sk-test", model: "gpt-4.1" } },
+    });
+    mocks.streamExtraction.mockImplementation(async function* () {
+      yield { kind: "status", text: "Reading the capture." };
+      yield { kind: "error", message: "Provider failed." };
+    });
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    expect(await screen.findByText("Something went wrong")).toBeInTheDocument();
+    expect(screen.getByText("Provider failed.")).toBeInTheDocument();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
   });
 
   it("aborts the active stream when processing is cancelled", async () => {
     const user = userEvent.setup();
     let capturedSignal: AbortSignal | undefined;
+    let resumeStream: () => void = () => undefined;
+    const waitForResume = new Promise<void>((resolve) => {
+      resumeStream = resolve;
+    });
     mocks.getAiSettings.mockResolvedValue({
       selectedProvider: "openai",
       providers: { openai: { apiKey: "sk-test", model: "gpt-4.1" } },
@@ -259,11 +332,17 @@ describe("App", () => {
     mocks.streamExtraction.mockImplementation(async function* (_input: unknown, signal?: AbortSignal) {
       capturedSignal = signal;
       yield { kind: "status", text: "Reading the capture." };
-      await new Promise<void>(() => undefined);
+      await waitForResume;
+      yield { kind: "done", events: [boardMeetingEvent()] };
     });
 
     const { container } = render(<App />);
     await screen.findByRole("button", { name: /take photo/i });
+
+    await user.click(screen.getByRole("button", { name: /add a note for this scan/i }));
+    await user.type(screen.getByRole("textbox", { name: "Note for this scan" }), "Use the red row.");
+    await user.click(screen.getByRole("button", { name: /save note/i }));
+    expect(await screen.findByText("Use the red row.")).toBeInTheDocument();
 
     const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
     await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
@@ -273,6 +352,52 @@ describe("App", () => {
 
     expect(capturedSignal?.aborted).toBe(true);
     expect(await screen.findByRole("button", { name: /take photo/i })).toBeInTheDocument();
+    expect(screen.queryByText("Use the red row.")).not.toBeInTheDocument();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
+
+    resumeStream();
+    await waitFor(() => expect(screen.queryByDisplayValue("Board meeting")).not.toBeInTheDocument());
+    expect(mocks.openExternal).not.toHaveBeenCalled();
+  });
+
+  it("revokes stale image preview URLs without replacing the active preview", async () => {
+    const user = userEvent.setup();
+    const firstArrayBuffer = deferred<ArrayBuffer>();
+    const holdStream = deferred();
+    const firstFile = new File(["first"], "first.png", { type: "image/png" });
+    const secondFile = new File(["second"], "second.png", { type: "image/png" });
+    Object.defineProperty(firstFile, "arrayBuffer", {
+      configurable: true,
+      value: vi.fn(() => firstArrayBuffer.promise),
+    });
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openai",
+      providers: { openai: { apiKey: "sk-test", model: "gpt-4.1" } },
+    });
+    mocks.imagePreviewUrl
+      .mockReturnValueOnce("blob:second")
+      .mockReturnValueOnce("blob:first");
+    mocks.streamExtraction.mockImplementation(async function* (_input: unknown, signal?: AbortSignal) {
+      yield { kind: "status", text: "Reading the capture." };
+      await holdStream.promise;
+      if (signal?.aborted) return;
+      yield { kind: "done", events: [boardMeetingEvent()] };
+    });
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+
+    await user.upload(upload, firstFile);
+    await user.upload(upload, secondFile);
+    expect(await screen.findByTestId("agent-transcript")).toHaveTextContent("status / Reading the capture.");
+
+    firstArrayBuffer.resolve(new Uint8Array([1]).buffer);
+    await waitFor(() => expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:first"));
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(URL.revokeObjectURL).toHaveBeenLastCalledWith("blob:second");
+    holdStream.resolve();
   });
 
   it("opens Google Calendar immediately when exactly one event is extracted", async () => {
@@ -293,6 +418,31 @@ describe("App", () => {
     );
     // Still lands on review as a fallback (e.g. if a popup blocker swallows the open).
     expect(await screen.findByDisplayValue("Board meeting")).toBeInTheDocument();
+  });
+
+  it("stays on capture if processing is cancelled while the calendar open is pending", async () => {
+    const user = userEvent.setup();
+    const calendarOpen = deferred();
+    mocks.getAiSettings.mockResolvedValue({
+      selectedProvider: "openrouter",
+      providers: { openrouter: { apiKey: "sk-or-test", model: "moonshotai/kimi-k2.6" } },
+    });
+    mocks.openExternal.mockReturnValueOnce(calendarOpen.promise);
+
+    const { container } = render(<App />);
+    await screen.findByRole("button", { name: /take photo/i });
+
+    const upload = container.querySelector('input[accept="image/*,application/pdf"]') as HTMLInputElement;
+    await user.upload(upload, new File(["image"], "event.png", { type: "image/png" }));
+
+    await waitFor(() => expect(mocks.openExternal).toHaveBeenCalledWith(expect.stringContaining("calendar.google.com")));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(await screen.findByRole("button", { name: /take photo/i })).toBeInTheDocument();
+
+    calendarOpen.resolve();
+    await calendarOpen.promise;
+    expect(screen.queryByDisplayValue("Board meeting")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /take photo/i })).toBeInTheDocument();
   });
 
   it("renders the #rough SVG filter for riso stamp effects", async () => {

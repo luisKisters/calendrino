@@ -16,7 +16,7 @@ interface CaptureProps {
 }
 
 type CameraState = "idle" | "starting" | "ready" | "fallback";
-const CAMERA_REQUEST_TIMEOUT_MS = 2500;
+const HAVE_CURRENT_DATA = 2;
 
 function appendUniqueInstruction(existing: string | undefined, note: string): string {
   const trimmedExisting = existing?.trim() ?? "";
@@ -45,6 +45,7 @@ export function Capture({
   const [cameraState, setCameraState] = useState<CameraState>(() =>
     canUseCameraStream() ? "idle" : "fallback",
   );
+  const [videoReady, setVideoReady] = useState(false);
   const [noteSheetOpen, setNoteSheetOpen] = useState(false);
   const [draftNote, setDraftNote] = useState("");
   const [saveToGeneral, setSaveToGeneral] = useState(false);
@@ -62,6 +63,7 @@ export function Capture({
     if (!streamRef.current || !videoRef.current) return;
 
     videoRef.current.srcObject = streamRef.current;
+    if (hasVideoFrame(videoRef.current)) setVideoReady(true);
     const playResult = videoRef.current.play();
     if (playResult) {
       playResult.catch(() => undefined);
@@ -97,6 +99,7 @@ export function Capture({
   function replaceStream(nextStream: MediaStream | null) {
     stopStream(streamRef.current);
     streamRef.current = nextStream;
+    setVideoReady(false);
   }
 
   async function enableCamera() {
@@ -121,6 +124,7 @@ export function Capture({
       if (!mountedRef.current) return;
       replaceStream(null);
       setCameraState("fallback");
+      cameraRef.current?.click();
     }
   }
 
@@ -140,8 +144,8 @@ export function Capture({
       onFile(captured);
       return;
     }
+    replaceStream(null);
     setCameraState("fallback");
-    cameraRef.current?.click();
   }
 
   return (
@@ -156,6 +160,8 @@ export function Capture({
             autoPlay
             muted
             playsInline
+            onLoadedData={() => setVideoReady(true)}
+            onCanPlay={() => setVideoReady(true)}
           />
         ) : (
           <StaticCaptureArt busy={cameraState === "starting"} />
@@ -164,7 +170,7 @@ export function Capture({
           type="button"
           aria-label="Take photo"
           onClick={handleShutter}
-          disabled={cameraState === "starting"}
+          disabled={cameraState === "starting" || (cameraState === "ready" && !videoReady)}
           className="absolute bottom-4 left-1/2 z-20 grid h-16 w-16 -translate-x-1/2 place-items-center rounded-full border-2 border-ink bg-paper text-ink shadow-[0_3px_0_var(--ink)] [mix-blend-mode:multiply] transition-transform hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
         >
           <span
@@ -319,65 +325,27 @@ function requestCameraStream(constraints: MediaStreamConstraints): Promise<Media
     return Promise.reject(new DOMException("Camera unavailable", "NotFoundError"));
   }
 
-  let timedOut = false;
-
-  return new Promise((resolve, reject) => {
-    const timeoutId = window.setTimeout(() => {
-      timedOut = true;
-      reject(new DOMException("Camera request timed out", "TimeoutError"));
-    }, CAMERA_REQUEST_TIMEOUT_MS);
-
-    let request: Promise<MediaStream>;
-    try {
-      request = getUserMedia(constraints);
-    } catch (error) {
-      window.clearTimeout(timeoutId);
-      reject(error);
-      return;
-    }
-
-    request.then(
-      (stream) => {
-        if (timedOut) {
-          stopStream(stream);
-          return;
-        }
-        window.clearTimeout(timeoutId);
-        resolve(stream);
-      },
-      (error: unknown) => {
-        if (timedOut) return;
-        window.clearTimeout(timeoutId);
-        reject(error);
-      },
-    );
-  });
+  return getUserMedia(constraints);
 }
 
 function getCameraStreamSource() {
-  const cameraMode = cameraModeForTest();
-  if (cameraMode === "unavailable") {
-    return null;
-  }
-
   if (typeof navigator === "undefined") return null;
   const mediaDevices = navigator.mediaDevices;
   if (!mediaDevices?.getUserMedia) return null;
   return mediaDevices.getUserMedia.bind(mediaDevices);
 }
 
-function cameraModeForTest() {
-  if (typeof window === "undefined") return null;
-  const mode = new URLSearchParams(window.location.search).get("camera");
-  return mode === "unavailable" ? mode : null;
-}
-
 function stopStream(stream: MediaStream | null) {
   stream?.getTracks().forEach((track) => track.stop());
 }
 
+function hasVideoFrame(video: HTMLVideoElement | null): video is HTMLVideoElement {
+  if (!video) return false;
+  return video.readyState >= HAVE_CURRENT_DATA && video.videoWidth > 0 && video.videoHeight > 0;
+}
+
 async function captureVideoFrame(video: HTMLVideoElement | null): Promise<File | null> {
-  if (!video) return null;
+  if (!hasVideoFrame(video)) return null;
 
   const width = video.videoWidth || video.clientWidth || 1280;
   const height = video.videoHeight || video.clientHeight || 720;
@@ -388,7 +356,11 @@ async function captureVideoFrame(video: HTMLVideoElement | null): Promise<File |
   const context = canvas.getContext("2d");
   if (!context || !canvas.toBlob) return null;
 
-  context.drawImage(video, 0, 0, width, height);
+  try {
+    context.drawImage(video, 0, 0, width, height);
+  } catch {
+    return null;
+  }
 
   const blob = await new Promise<Blob | null>((resolve) => {
     canvas.toBlob(resolve, "image/jpeg", 0.92);
