@@ -279,13 +279,13 @@ narrow us to one provider). API-key-free testing uses `ai/test`
 **Files:**
 - Modify: `README.md`, `CLAUDE.md` (none functional)
 
-- [ ] Run `pnpm run test:all` (chromium + mobile) and `pnpm run build` — all green.
-- [ ] Confirm: live camera + fallback works; one-time note clears after one use and the
+- [x] Run `pnpm run test:all` (chromium + mobile) and `pnpm run build` — all green.
+- [x] Confirm: live camera + fallback works; one-time note clears after one use and the
       general instructions persist + reach the model; processing shows the real
       image/PDF darkened in the **same-size frame** with a streaming transcript; gear
       icon is clean; both privacy sentences are gone; no emoji icons; reduced-motion
       disables stream/scan animations; touch targets ≥44px.
-- [ ] agent-browser walk: capture → (note sheet) → processing → review → settings.
-- [ ] Update `README.md` (custom instructions, live camera) and `CLAUDE.md` (streaming
+- [x] agent-browser walk: capture → (note sheet) → processing → review → settings.
+- [x] Update `README.md` (custom instructions, live camera) and `CLAUDE.md` (streaming
       endpoint `api/extract-stream`, `TranscriptChunk` contract, `ai/test` mocks,
       `pdfPreview`, `CaptureFrame`/`Sheet` primitives).

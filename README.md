@@ -19,8 +19,8 @@ confirmations. Type is Bricolage Grotesque (display) + DM Sans (body) + Space Mo
 
 The reference design is at [`docs/brand/riso-flow.html`](docs/brand/riso-flow.html).
 Shared UI primitives live in `src/components/riso/` (Icon, RisoButton, RisoField,
-Stamp, Halftone, Logo). Design tokens are defined in the `@theme` block at the top
-of `src/index.css`.
+RisoTextarea, CaptureFrame, Sheet, Stamp, Halftone, Logo). Design tokens are
+defined in the `@theme` block at the top of `src/index.css`.
 
 To regenerate app icons from the riso source mark:
 
@@ -30,17 +30,24 @@ pnpm tauri icon ./app-icon.png   # rebuilds src-tauri/icons/* from the 1024×102
 
 ## How it works
 
-1. **Capture** — take a photo or upload an image/PDF.
-2. **Extract** — the file is sent to your selected AI provider via the Vercel AI
-   SDK, which returns structured events (Zod-validated). Supported providers are
-   Gemini, Anthropic, OpenAI, OpenRouter, and DeepSeek.
-3. **Confirm** — review/edit the detected event(s).
-4. **Add** — opens the Google Calendar "create event" form, pre-filled.
+1. **Capture** — tap to enable an in-frame live camera preview, use the shutter,
+   or upload an image/PDF. When camera access is unavailable or denied, Calendrino
+   falls back to the platform's native camera/file picker.
+2. **Guide** — optional custom instructions can be saved globally in Settings, and
+   a one-time note can be added from the capture screen for the next scan only.
+3. **Extract** — the file and relevant instructions are sent to your selected AI
+   provider via the Vercel AI SDK. The processing screen shows the captured image
+   or first PDF page while a streaming agent transcript reports status, model
+   reasoning when available, and detected event titles.
+4. **Confirm** — review/edit the detected event(s).
+5. **Add** — opens the Google Calendar "create event" form, pre-filled.
 
 Native builds send the AI request **straight from the app to the selected
 provider** using the Tauri HTTP plugin, which bypasses webview CORS. Browser/PWA
 builds send the same transient request through the same-origin Vercel Function
-at `/api/extract` so provider CORS does not block extraction.
+at `/api/extract-stream` so provider CORS does not block the streaming transcript
+flow. The older `/api/extract` JSON endpoint remains for non-streaming callers and
+tests.
 
 ## Quick start (desktop)
 
@@ -51,8 +58,9 @@ pnpm install
 pnpm run tauri dev      # launches the desktop app
 ```
 
-On first launch, choose Gemini, Anthropic, OpenAI, or OpenRouter and paste your
-API key. The key is stored only on your device.
+On first launch, choose Gemini, Anthropic, OpenAI, OpenRouter, or DeepSeek and
+paste your API key. The key is stored only on your device. Settings also include
+optional custom instructions that apply to every scan until changed.
 
 Browser/PWA preview:
 
@@ -62,7 +70,7 @@ pnpm run dev
 
 That starts Vite on `http://localhost:1420` / `http://127.0.0.1:1420`. In web
 mode, settings use `localStorage`, Google Calendar opens in a browser tab, and
-AI extraction posts to `/api/extract`.
+AI extraction posts to `/api/extract-stream`.
 
 ## Build
 
@@ -110,18 +118,20 @@ In CI the keys come from GitHub Actions secrets, never the repo.
 src/
   lib/
     schema.ts     Zod event schema + CalendarEvent type
-    ai.ts         extractEvents() — Tauri direct call or browser /api/extract proxy
-    aiCore.ts     shared provider/model construction + AI SDK call
-    aiContract.ts shared /api/extract request/response contract
+    ai.ts         extractEvents()/streamExtraction() — Tauri direct calls or browser API proxy
+    aiCore.ts     shared provider/model construction + AI SDK calls
+    aiContract.ts shared extraction request/response contract
+    transcript.ts TranscriptChunk contract for streaming status/thinking/found/done/error chunks
+    pdfPreview.ts first-page PDF rendering + image preview URL helpers
     gcal.ts       buildGCalUrl() — Google Calendar prefill URL
     datetime.ts   local-time parsing/formatting helpers
     store.ts      API key persistence (Tauri store / localStorage)
     platform.ts   isTauri(), aiFetch, openExternal()
   components/
-    riso/          Shared riso primitives: Icon · RisoButton · RisoField · Stamp · Halftone · Logo
+    riso/          Shared riso primitives: Icon · RisoButton · RisoField · RisoTextarea · CaptureFrame · Sheet · Stamp · Halftone · Logo
                    Settings · Capture · Processing · Review · EventCard · ErrorView · Header · Success
   App.tsx         screen state machine
-api/              Vercel Function for browser/PWA AI extraction
+api/              Vercel Functions for browser/PWA AI extraction and NDJSON streaming
 src-tauri/        Rust shell, plugin registration, capabilities, config
 docs/plans/       PRD, plan1 (V0), ideas (roadmap)
 ```
@@ -130,9 +140,11 @@ docs/plans/       PRD, plan1 (V0), ideas (roadmap)
 
 Native mode is local-first. Your API key lives on-device (V0 uses the store
 plugin; hardening to the OS keychain is a planned follow-up), and captured files
-are sent only to the selected AI provider with your key. In browser/PWA mode,
-your API key and captured file are sent transiently to the deployed Vercel
-Function, which forwards the extraction request and does not store them.
+and custom instructions are sent only to the selected AI provider with your key.
+One-time scan notes are cleared after the scan finishes. In browser/PWA mode,
+your API key, captured file, and relevant instructions are sent transiently to
+the deployed Vercel Function, which forwards the extraction request and does not
+store them.
 
 ## Provider defaults
 
