@@ -238,13 +238,13 @@ narrow us to one provider). API-key-free testing uses `ai/test`
 - Create: `src/lib/pdfPreview.ts`, `src/lib/pdfPreview.test.ts`
 - Modify: `package.json` (add `pdfjs-dist`), `vite.config.ts` if worker config needs it
 
-- [ ] Add `pdfjs-dist`; `pdfPreview.ts`: `renderPdfFirstPage(bytes): Promise<string>`
+- [x] Add `pdfjs-dist`; `pdfPreview.ts`: `renderPdfFirstPage(bytes): Promise<string>`
       (dataURL) lazy-importing pdfjs and configuring the worker via a Vite `?url` import;
       plus a small `imagePreviewUrl(file)` helper (`URL.createObjectURL`).
-- [ ] Write tests: `renderPdfFirstPage` returns a non-empty `data:` URL for the existing
+- [x] Write tests: `renderPdfFirstPage` returns a non-empty `data:` URL for the existing
       fixture `src/test/fixtures/sample-event.pdf` (jsdom canvas mocked/guarded as needed).
-- [ ] Run `pnpm run test` and `pnpm run build` — must pass before Task 8.
-- [ ] CI: confirm `pnpm install` picks up `pdfjs-dist` before the test/build steps.
+- [x] Run `pnpm run test` and `pnpm run build` — must pass before Task 8.
+- [x] CI: confirm `pnpm install` picks up `pdfjs-dist` before the test/build steps.
 
 ### Task 8: Processing screen — darkened preview + agent transcript, wired to App
 
