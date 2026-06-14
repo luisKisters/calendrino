@@ -2,11 +2,12 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { generateObject, type JSONValue, type UserContent } from "ai";
+import { generateObject, streamObject, type JSONValue, type UserContent } from "ai";
 import { getProviderConfig, type AiProviderId } from "./aiProviders.js";
 import type { NowContext } from "./datetime.js";
 import { EXTRACTED_TEXT_MEDIA_TYPE, prepareMediaForProvider } from "./mediaPrep.js";
 import { EventsSchema, type CalendarEvent } from "./schema.js";
+import type { TranscriptChunk } from "./transcript.js";
 
 export interface DirectExtractInput {
   bytes: Uint8Array;
@@ -18,6 +19,7 @@ export interface DirectExtractInput {
   instructions?: string;
   now: NowContext;
   fetch?: typeof fetch;
+  abortSignal?: AbortSignal;
 }
 
 export function systemPrompt(now: NowContext, instructions?: string): string {
@@ -199,4 +201,101 @@ export async function extractEventsDirect(input: DirectExtractInput): Promise<Ca
     messages: [{ role: "user", content: userContentFor(media) }],
   });
   return object.events;
+}
+
+export async function* streamExtractionDirect(input: DirectExtractInput): AsyncIterable<TranscriptChunk> {
+  yield { kind: "status", text: "Preparing the capture for extraction." };
+  yield { kind: "status", text: `Asking ${getProviderConfig(input.provider).label} to find calendar events.` };
+  yield { kind: "status", text: "Watching for event details as they stream in." };
+
+  try {
+    const media = await prepareMediaForProvider(input);
+    assertMediaSupported({ mediaType: media.mediaType, provider: input.provider });
+    const modelId = resolveModelId(input);
+    const result = streamObject({
+      model: modelFor(input, modelId),
+      schema: EventsSchema,
+      system: systemPrompt(input.now, input.instructions),
+      ...callTuning(input.provider, modelId),
+      abortSignal: input.abortSignal,
+      messages: [{ role: "user", content: userContentFor(media) }],
+    });
+    const seenTitles = new Set<string>();
+    let streamError: unknown;
+
+    for await (const part of result.fullStream) {
+      for (const chunk of chunksFromStreamPart(part, seenTitles)) {
+        yield chunk;
+      }
+      if (isObjectWithType(part, "error")) {
+        streamError = part.error;
+        break;
+      }
+    }
+
+    if (streamError) {
+      await result.object.catch(() => undefined);
+      yield { kind: "error", message: errorMessage(streamError) };
+      return;
+    }
+
+    const object = await result.object;
+    yield { kind: "done", events: object.events };
+  } catch (error) {
+    yield { kind: "error", message: errorMessage(error) };
+  }
+}
+
+function* chunksFromStreamPart(part: unknown, seenTitles: Set<string>): Generator<TranscriptChunk> {
+  const reasoning = reasoningTextFromPart(part);
+  if (reasoning) {
+    yield { kind: "thinking", text: reasoning };
+  }
+
+  if (!isObjectWithType(part, "object")) return;
+  for (const title of eventTitlesFromPartial(part.object)) {
+    if (seenTitles.has(title)) continue;
+    seenTitles.add(title);
+    yield { kind: "found", text: `Found event: ${title}` };
+  }
+}
+
+function* eventTitlesFromPartial(partial: unknown): Generator<string> {
+  if (!partial || typeof partial !== "object" || !("events" in partial)) return;
+  const events = (partial as { events?: unknown }).events;
+  if (!Array.isArray(events)) return;
+
+  for (const event of events) {
+    if (!event || typeof event !== "object" || !("title" in event)) continue;
+    const title = (event as { title?: unknown }).title;
+    if (typeof title !== "string") continue;
+    const trimmed = title.trim();
+    if (trimmed) yield trimmed;
+  }
+}
+
+function reasoningTextFromPart(part: unknown): string | undefined {
+  if (!part || typeof part !== "object" || !("type" in part)) return undefined;
+  const type = (part as { type?: unknown }).type;
+  if (type !== "reasoning-delta" && type !== "reasoning") return undefined;
+
+  const fields = part as { delta?: unknown; textDelta?: unknown; text?: unknown };
+  const text =
+    typeof fields.delta === "string"
+      ? fields.delta
+      : typeof fields.textDelta === "string"
+        ? fields.textDelta
+        : typeof fields.text === "string"
+          ? fields.text
+          : "";
+  const trimmed = text.trim();
+  return trimmed || undefined;
+}
+
+function isObjectWithType<T extends string>(value: unknown, type: T): value is { type: T; [key: string]: unknown } {
+  return !!value && typeof value === "object" && "type" in value && (value as { type?: unknown }).type === type;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error || "AI extraction failed.");
 }

@@ -2,14 +2,14 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { extractEventsDirect } from "../src/lib/aiCore.js";
 import { ExtractRequestPayloadSchema } from "../src/lib/aiContract.js";
 
-const MAX_MEDIA_BYTES = 12 * 1024 * 1024;
-const MAX_BASE64_CHARS = Math.ceil((MAX_MEDIA_BYTES * 4) / 3) + 4;
+export const MAX_MEDIA_BYTES = 12 * 1024 * 1024;
+export const MAX_BASE64_CHARS = Math.ceil((MAX_MEDIA_BYTES * 4) / 3) + 4;
 
 function jsonError(res: VercelResponse, status: number, error: string): void {
   res.status(status).json({ error });
 }
 
-function decodeMedia(mediaBase64: string): Uint8Array {
+export function decodeMedia(mediaBase64: string): Uint8Array {
   return Uint8Array.from(Buffer.from(mediaBase64, "base64"));
 }
 
@@ -20,7 +20,7 @@ function decodeMedia(mediaBase64: string): Uint8Array {
  * extraction request"), because Zod was handed a string instead of an object.
  * Normalise to a parsed object before validation.
  */
-function readJsonBody(body: unknown): unknown {
+export function readJsonBody(body: unknown): unknown {
   if (typeof body === "string" || body instanceof Buffer) {
     const text = body.toString().trim();
     if (!text) return undefined;

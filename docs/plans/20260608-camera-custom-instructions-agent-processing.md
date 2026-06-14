@@ -204,8 +204,8 @@ narrow us to one provider). API-key-free testing uses `ai/test`
   `src/lib/streamExtraction.test.ts`
 - Modify: `src/lib/aiCore.ts`, `src/lib/ai.ts`
 
-- [ ] `transcript.ts`: export the `TranscriptChunk` union.
-- [ ] `aiCore.ts`: add `streamExtractionDirect(input): AsyncIterable<TranscriptChunk>`
+- [x] `transcript.ts`: export the `TranscriptChunk` union.
+- [x] `aiCore.ts`: add `streamExtractionDirect(input): AsyncIterable<TranscriptChunk>`
       using `streamObject({ model, schema: EventsSchema, system, messages, ...callTuning })`:
       emit scripted `status` lines first; derive `found` chunks from `partialObjectStream`
       as new event titles appear; forward reasoning stream parts (via `fullStream`) as
@@ -215,20 +215,22 @@ narrow us to one provider). API-key-free testing uses `ai/test`
       evaluate a light thinking budget — if it destabilises structured streaming for a
       provider, keep narration-only there. Verify `streamObject` reasoning-part support
       via ctx7 during build.)
-- [ ] `api/extract-stream.ts`: validate with `ExtractRequestPayloadSchema`, run
+- [x] `api/extract-stream.ts`: validate with `ExtractRequestPayloadSchema`, run
       `streamExtractionDirect`, `res.write(JSON.stringify(chunk)+"\n")` per chunk (NDJSON),
       `res.end()`; reuse `decodeMedia`/size limits from `api/extract.ts`; emit an `error`
       chunk on failure.
-- [ ] `ai.ts`: add `streamExtraction(input, signal?)` — Tauri calls
+- [x] `ai.ts`: add `streamExtraction(input, signal?)` — Tauri calls
       `streamExtractionDirect` with `aiFetch`; web POSTs to `/api/extract-stream` and
       yields parsed NDJSON chunks via `response.body.getReader()` with newline buffering;
       support `AbortController`. (If the Tauri http plugin cannot stream the response,
       Tauri uses `streamExtractionDirect` directly — web-only concern.)
-- [ ] Write tests (`ai/test`): `MockLanguageModelV4` + `simulateReadableStream` →
+- [x] Write tests (`ai/test`): `MockLanguageModelV4` + `simulateReadableStream` →
       assert chunk ordering (`status` → `found`+ → `done` with the right events); NDJSON
-      client parser splits multi-chunk bodies correctly.
-- [ ] Run `pnpm run test` and `pnpm run build` — must pass before Task 7.
-- [ ] Browser-verify: not applicable (wired into the UI in Task 8).
+      client parser splits multi-chunk bodies correctly. (Installed `ai/test` exposes
+      MockLanguageModelV3 rather than V4; tests use `simulateReadableStream` with a
+      mocked `streamObject`.)
+- [x] Run `pnpm run test` and `pnpm run build` — must pass before Task 7.
+- [x] Browser-verify: not applicable (wired into the UI in Task 8).
 
 ### Task 7: PDF first-page + image preview helpers
 
